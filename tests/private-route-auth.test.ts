@@ -123,7 +123,7 @@ test("proxy redirects cookieless private requests to /login", () => {
       assert.equal(response.status, 307, pathname);
       assert.equal(
         response.headers.get("location"),
-        "https://FragmentHubDB.test/login",
+        "https://fragmenthubdb.test/login",
       );
     }
   }
