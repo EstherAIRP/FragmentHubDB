@@ -9,7 +9,7 @@ test("Atlas must be explicitly selected; a token alone preserves legacy GitHub",
     backend: process.env.FragmentHubDB_DATA_STORE,
     github: process.env.FragmentHubDB_GITHUB_TOKEN,
     mongo: process.env.FragmentHubDB_MONGODB_URI,
-    vercelMongo: process.env.MONGODB_URI,
+    genericMongo: process.env.MONGODB_URI,
   };
   try {
     delete process.env.FragmentHubDB_DATA_STORE;
@@ -26,6 +26,8 @@ test("Atlas must be explicitly selected; a token alone preserves legacy GitHub",
     process.env.FragmentHubDB_DATA_STORE = "mongodb";
     assert.equal(fragmentBackend(), "mongodb");
     assert.equal(isFragmentWriteConfigured(), false);
+    process.env.MONGODB_URI = "mongodb://unrelated.example.test";
+    assert.equal(isFragmentWriteConfigured(), false);
     process.env.FragmentHubDB_MONGODB_URI = "mongodb://example.test";
     assert.equal(isFragmentWriteConfigured(), true);
 
@@ -36,7 +38,7 @@ test("Atlas must be explicitly selected; a token alone preserves legacy GitHub",
       ["FragmentHubDB_DATA_STORE", previous.backend],
       ["FragmentHubDB_GITHUB_TOKEN", previous.github],
       ["FragmentHubDB_MONGODB_URI", previous.mongo],
-      ["MONGODB_URI", previous.vercelMongo],
+      ["MONGODB_URI", previous.genericMongo],
     ] as const) {
       if (value === undefined) delete process.env[name];
       else process.env[name] = value;
