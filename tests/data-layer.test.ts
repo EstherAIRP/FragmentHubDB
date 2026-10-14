@@ -118,3 +118,22 @@ test("schema keeps interview_used synchronized with interview contents", () => {
 
   assert.equal(fragmentSchema.safeParse(invalid).success, false);
 });
+
+test("stored Fragment original input and source metadata cannot be overwritten", () => {
+  const previous = fragment({ id: "F-000001" });
+  const immutableCases: Array<[string, Partial<Fragment>]> = [
+    ["original_input", { original_input: "AI-overwritten input" }],
+    ["source", { source: { channel: "web" } }],
+    ["ai", { ai: { classification_confirmed: true, interview_used: true }, interview: [{ question: "Q", answer: "A" }] }],
+    ["interview", { interview: [{ question: "Q", answer: "A" }], ai: { classification_confirmed: true, interview_used: true } }],
+  ];
+
+  for (const [field, patch] of immutableCases) {
+    const candidate = fragment({ ...previous, ...patch });
+    const issues = validateFragmentSemantics(candidate, [], { previous });
+    assert.ok(
+      issues.some((issue) => issue.path === field),
+      "Expected immutable " + field + " validation error",
+    );
+  }
+});
