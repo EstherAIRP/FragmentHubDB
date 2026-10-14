@@ -2,16 +2,15 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { isAuthenticated } from "@/lib/auth";
+import { fragmentBackend, isFragmentWriteConfigured } from "@/lib/fragments/backend";
 import { manualFragmentDraftSchema } from "@/lib/fragments/manual-draft";
 import { prepareCreateInput } from "@/lib/fragments/write";
-import {
-  createGitHubFragment,
-} from "@/lib/github/fragment-store";
-import { isGitHubRemoteConfigured } from "@/lib/github/availability";
-import {
-  FragmentDataValidationError,
-} from "@/lib/fragments/semantic-validator";
+import { createGitHubFragment } from "@/lib/github/fragment-store";
+import { createMongoFragment } from "@/lib/mongodb/fragment-store";
+import { FragmentDataValidationError } from "@/lib/fragments/semantic-validator";
 import { GitHubApiError } from "@/lib/github/client";
+
+export const runtime = "nodejs";
 
 const requestSchema = z.object({
   draft: manualFragmentDraftSchema,
@@ -22,37 +21,31 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  if (!isGitHubRemoteConfigured()) {
+  if (!isFragmentWriteConfigured()) {
     return NextResponse.json(
-      { error: "GitHub Remote Store is not configured." },
+      { error: "The selected Fragment data store is not configured for writes." },
       { status: 503 },
     );
   }
 
-  const payload = requestSchema.safeParse(
-    await request.json().catch(() => null),
-  );
-
+  const payload = requestSchema.safeParse(await request.json().catch(() => null));
   if (!payload.success) {
     return NextResponse.json(
-      {
-        error: "Fragment draft validation failed.",
-        details: payload.error.flatten(),
-      },
+      { error: "Fragment draft validation failed.", details: payload.error.flatten() },
       { status: 400 },
     );
   }
 
   try {
-    const stored = await createGitHubFragment(
-      prepareCreateInput(payload.data.draft),
-    );
+    const input = prepareCreateInput(payload.data.draft);
+    if (fragmentBackend() === "mongodb") {
+      const fragment = await createMongoFragment(input);
+      return NextResponse.json({ fragment }, { status: 201 });
+    }
 
+    const stored = await createGitHubFragment(input);
     return NextResponse.json(
-      {
-        fragment: stored.fragment,
-        sha: stored.sha,
-      },
+      { fragment: stored.fragment, sha: stored.sha },
       { status: 201 },
     );
   } catch (error) {
@@ -62,19 +55,14 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-
     if (error instanceof GitHubApiError) {
-      console.error("GitHub create failed:", error.responseBody);
+      console.error("GitHub create failed:", error.status);
       return NextResponse.json(
         { error: "GitHub write failed." },
         { status: error.status >= 500 ? 502 : 400 },
       );
     }
-
     console.error("Fragment create failed:", error);
-    return NextResponse.json(
-      { error: "Fragment create failed." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Fragment create failed." }, { status: 500 });
   }
 }
