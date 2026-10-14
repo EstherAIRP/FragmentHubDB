@@ -8,8 +8,11 @@
  * remain untouched for rollback. NEVER publish the exported JSON elsewhere.
  */
 import { isDeepStrictEqual } from "node:util";
+import { execFileSync } from "node:child_process";
+import { loadEnvConfig } from "@next/env";
 
 import { listLocalFragments } from "../lib/fragments/local-store";
+import { assertFragmentHubDbOrigin } from "../lib/fragments/migration-origin";
 import {
   assertFragmentSemantics,
 } from "../lib/fragments/semantic-validator";
@@ -26,6 +29,23 @@ async function main() {
   }
 
   const apply = args.includes("--apply");
+
+  // Load .env.local for CLI use (the Next.js web runtime does this itself).
+  loadEnvConfig(process.cwd());
+
+  // Guard before touching Atlas, even for dry-run.
+  let origin: string;
+  try {
+    origin = execFileSync("git", ["remote", "get-url", "origin"], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  } catch {
+    throw new Error("Refusing MongoDB import: cannot verify git origin.");
+  }
+  assertFragmentHubDbOrigin(origin);
+
   const source = await listLocalFragments();
   if (source.length === 0) {
     throw new Error("No local fragments found. Check out the correct source branch first.");
