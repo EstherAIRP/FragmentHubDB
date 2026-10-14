@@ -113,7 +113,7 @@ export async function replaceMongoFragment(
 
     const result = await collection.replaceOne(
       { _id: id, updated_at: expectedUpdatedAt },
-      { ...candidate, _id: id },
+      candidate,
       { session },
     );
     if (result.matchedCount !== 1) {
@@ -190,7 +190,7 @@ export async function applyMongoStatusBatch(
         const previous = byId.get(write.id)!;
         const result = await collection.replaceOne(
           { _id: write.id, updated_at: previous.updated_at },
-          { ...write.fragment, _id: write.id },
+          write.fragment,
           { session },
         );
         if (result.matchedCount !== 1) {
