@@ -31,7 +31,7 @@ FragmentHubDB_MONGODB_URI=mongodb+srv://<user>:<password>@<cluster-host>/?retryW
 FragmentHubDB_MONGODB_DATABASE=fragmenthubdb
 ~~~
 
-也支援 Vercel Atlas 整合產生的 `MONGODB_URI`。
+此專案僅接受 `FragmentHubDB_MONGODB_URI`，不使用通用 `MONGODB_URI`。若透過 Atlas／Vercel 整合取得連線字串，請將它設定為本專案專屬的環境變數。
 
 ## 無破壞性匯入與切換
 
