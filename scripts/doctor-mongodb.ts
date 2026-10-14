@@ -9,6 +9,7 @@ import { execFileSync } from "node:child_process";
 import { loadEnvConfig } from "@next/env";
 
 import { assertFragmentHubDbOrigin } from "../lib/fragments/migration-origin";
+import { fragmentHubDbDatabaseName } from "../lib/mongodb/database-name";
 import { validateFragmentSemantics } from "../lib/fragments/semantic-validator";
 import { closeMongoClient, getMongoClient } from "../lib/mongodb/client";
 import { listMongoFragments } from "../lib/mongodb/fragment-store";
@@ -39,7 +40,7 @@ async function main(): Promise<void> {
     ).map((issue) => fragment.id + ": " + issue.code + " (" + issue.path + ")"),
   );
 
-  console.log("Database:", process.env.FragmentHubDB_MONGODB_DATABASE || "fragmenthubdb");
+  console.log("Database:", fragmentHubDbDatabaseName(process.env.FragmentHubDB_MONGODB_DATABASE));
   console.log("Ping: OK");
   console.log("Transactions: supported topology");
   console.log("Readable fragments:", fragments.length);
