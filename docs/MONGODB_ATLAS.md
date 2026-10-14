@@ -42,8 +42,11 @@ FragmentHubDB_MONGODB_DATABASE=fragmenthubdb
 ~~~bash
 npm install
 npm run validate:data
+npm run doctor:mongodb
 npm run migrate:mongodb
 ~~~
+
+`doctor:mongodb` 只讀取、檢查 Atlas 連線與伺服器拓樸是否支援交易，並驗證已存在的 Fragment；不會建立或更改資料。執行時若尚未建立碎片集合，正常顯示 0 筆。
 
 4. 檢查 dry-run 顯示的來源、已存在與待匯入筆數；確認後才執行：
 
