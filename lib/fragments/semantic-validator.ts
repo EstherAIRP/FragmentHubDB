@@ -89,6 +89,17 @@ export function validateFragmentSemantics(
         message: "created_at cannot be changed after creation.",
       });
     }
+
+    // These are immutable even if callers bypass the Web form.
+    for (const key of ["original_input", "interview", "source", "ai"] as const) {
+      if (JSON.stringify(options.previous[key]) !== JSON.stringify(fragment[key])) {
+        issues.push({
+          code: "immutable_" + key,
+          path: key,
+          message: key + " cannot be changed after creation.",
+        });
+      }
+    }
   }
 
   return issues;
