@@ -20,7 +20,8 @@
     "test:private-auth": "tsx --test tests/private-route-auth.test.ts",
     "test:status-batch": "tsx --test tests/status-batch.test.ts",
     "migrate:mongodb": "tsx scripts/migrate-local-to-mongodb.ts",
-    "test:backend": "tsx --test tests/mongodb-backend.test.ts tests/mongodb-versioning.test.ts"
+    "test:backend": "tsx --test tests/mongodb-backend.test.ts tests/mongodb-versioning.test.ts",
+    "doctor:mongodb": "tsx scripts/doctor-mongodb.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",
