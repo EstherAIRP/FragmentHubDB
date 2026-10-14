@@ -1,8 +1,5 @@
 import { MongoClient, type Collection } from "mongodb";
-import type { Fragment } from "@/lib/fragment-schema";
-
-/** The Fragment's public id is its MongoDB _id. No ObjectId conversion. */
-export type MongoFragmentDocument = Fragment & { _id: string };
+import type { MongoFragmentDocument } from "@/lib/mongodb/document";
 
 let cachedClient: Promise<MongoClient> | undefined;
 
