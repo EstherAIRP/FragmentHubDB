@@ -36,7 +36,7 @@ FragmentHubDB_MONGODB_DATABASE=fragmenthubdb
 ## 無破壞性匯入與切換
 
 1. **先暫停舊 GitHub 寫入**，以防來源在遷移期間變動。
-2. 在受信任的本機環境下載／更新 **`EstherAIRP/FragmentHubDB`** 的正確來源分支，確認 `data/fragments/*.json` 包含完整正式資料。匯入工具會檢查 `git remote origin`，若不指向這個儲存庫就拒絕執行，包括預檢模式。
+2. 在受信任的本機環境下載／更新 **`EstherAIRP/FragmentHubDB`** 的正確來源分支，確認 `data/fragments/*.json` 包含完整正式資料。匯入工具會檢查 `git remote origin`，若不指向這個儲存庫就拒絕執行，包括預檢模式。若 `data/fragments/` 有未提交變更，也會拒絕匯入並顯示來源 Commit。
 3. 先只驗證（命令會載入專案 `.env.local` 的 Atlas 連線設定）：
 
 ~~~bash
@@ -51,7 +51,7 @@ npm run migrate:mongodb
 npm run migrate:mongodb -- --apply
 ~~~
 
-匯入只新增缺少的 ID，已存在相同文件略過，同 ID 不同內容則拒絕；完成後逐筆讀回核對，原 JSON 不會刪除。
+匯入只新增缺少的 ID，已存在相同文件略過，同 ID 不同內容則拒絕。**Atlas 若有來源儲存庫不存在的碎片，會立即中止**，避免混入其他資料。所有來源及 Atlas 文件都會接受跨碎片語意驗證；完成後逐筆讀回核對，原 JSON 不會刪除。
 
 5. 驗證 Atlas 筆數與 Web 搜尋、詳情、關聯。
 6. **確認同步完成後**，才在 Vercel 設定：
@@ -78,3 +78,9 @@ FragmentHubDB_DATA_STORE=mongodb
 目前 Repository 若公開，過去提交於 `data/fragments` 的內容可能仍出現在 Git history。**改存 Atlas 不會清除 GitHub 歷史資料**。須另外評估公開紀錄的移除、備份與資料權限，不可僅刪除目前分支的 JSON。
 
 上線前至少檢查：未登入不能讀寫、無 Atlas 憑證不回退、ID 不碰撞、舊版本寫入回 409、`original_input` 不變、批次寫入原子性、連線字串不進瀏覽器、網站不呼叫模型 API。
+
+## 開發環境限制
+
+- `fragment-hub` Vercel 專案連接的是另一個 GitHub 儲存庫，不可用於 FragmentHubDB 的部署或資料庫測試。
+- FragmentHubDB 的 Atlas URI 與正式網站專案必須獨立設定，不能借用其他專案環境變數。
+- 尚未建立 Atlas 測試叢集前，程式的資料庫整合測試及完整建置均不可視為通過；PR 應維持草稿。
