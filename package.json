@@ -11,7 +11,7 @@
     "build:index": "npm run validate:data && tsx scripts/build-index.ts",
     "test:data": "tsx --test tests/data-layer.test.ts",
     "test:web": "tsx --test tests/web-mvp.test.ts",
-    "test": "npm run test:data && npm run test:web && npm run test:auth && npm run test:private-auth && npm run test:status-batch",
+    "test": "npm run test:data && npm run test:web && npm run test:auth && npm run test:private-auth && npm run test:status-batch && npm run test:backend",
     "prebuild": "npm run build:index",
     "build": "next build",
     "start": "next start",
@@ -19,7 +19,8 @@
     "test:auth": "tsx --test tests/auth-core.test.ts",
     "test:private-auth": "tsx --test tests/private-route-auth.test.ts",
     "test:status-batch": "tsx --test tests/status-batch.test.ts",
-    "migrate:mongodb": "tsx scripts/migrate-local-to-mongodb.ts"
+    "migrate:mongodb": "tsx scripts/migrate-local-to-mongodb.ts",
+    "test:backend": "tsx --test tests/mongodb-backend.test.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",
