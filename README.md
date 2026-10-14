@@ -50,7 +50,7 @@ npm run dev
 | `FragmentHubDB_GITHUB_REPOSITORY` | 選填，預設 `EstherAIRP/FragmentHubDB` |
 | `FragmentHubDB_GITHUB_BRANCH` | GitHub 舊後端使用；預設 `main` |
 | `FragmentHubDB_DATA_STORE` | `mongodb` / `github` / `local`；未設定時保留原本選擇行為 |
-| `FragmentHubDB_MONGODB_URI` | MongoDB Atlas 的伺服器端連線字串；也支援整合產生的 `MONGODB_URI` |
+| `FragmentHubDB_MONGODB_URI` | MongoDB Atlas 的伺服器端連線字串；不使用其他專案共用的 `MONGODB_URI` |
 | `FragmentHubDB_MONGODB_DATABASE` | 資料庫名稱；預設 `fragmenthubdb` |
 
 **資料來源由 `FragmentHubDB_DATA_STORE` 明確指定；未指定時才依原本 GitHub Token 邏輯選擇：**
