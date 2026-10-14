@@ -4,7 +4,7 @@ import type { MongoFragmentDocument } from "@/lib/mongodb/document";
 let cachedClient: Promise<MongoClient> | undefined;
 
 function mongoUri(): string {
-  const uri = process.env.FragmentHubDB_MONGODB_URI || process.env.MONGODB_URI;
+  const uri = process.env.FragmentHubDB_MONGODB_URI;
   if (!uri) {
     throw new Error("MongoDB is selected but FragmentHubDB_MONGODB_URI is missing.");
   }
