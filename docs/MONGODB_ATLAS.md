@@ -87,3 +87,7 @@ FragmentHubDB_DATA_STORE=mongodb
 - `fragment-hub` Vercel 專案連接的是另一個 GitHub 儲存庫，不可用於 FragmentHubDB 的部署或資料庫測試。
 - FragmentHubDB 的 Atlas URI 與正式網站專案必須獨立設定，不能借用其他專案環境變數。
 - 尚未建立 Atlas 測試叢集前，程式的資料庫整合測試及完整建置均不可視為通過；PR 應維持草稿。
+
+### MongoDB 資料庫命名護欄
+
+資料庫名稱必須為 `fragmenthubdb`，或以 `fragmenthubdb-`、`fragmenthubdb_` 開頭的環境專用名稱，例如 `fragmenthubdb_test`。`FragmentHubDB_MONGODB_DATABASE` 指向其他專案的資料庫名稱時會直接拒絕操作。
