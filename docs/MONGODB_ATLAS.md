@@ -19,6 +19,17 @@ Web 使用官方 MongoDB Node.js Driver；Atlas 舊版 App Services Data API 已
 - 看板批次狀態更新以 MongoDB Transaction 一次提交或一次取消。
 - MongoDB 快照**不等於 Git 歷史**；逐筆版本紀錄須另外設計 audit/history 集合。
 
+## 跨碎片寫入一致性
+
+MongoDB 儲存採用以下兩個集合：
+
+- `fragments`：正式 Fragment 文件，`_id` 為 `F-000001` 格式。
+- `metadata`：交易同步文件 `_id: "fragments"`，`version` 僅作為寫入同步計數器，**不是 Fragment 或版本歷史**。
+
+正式 API 的新增、編輯、刪除及看板狀態批次，都在同一個 MongoDB 交易內先更新 `metadata` 同步文件，再讀取與檢查 Fragment 關聯、最後寫入正式內容。並行請求因共用同步文件產生交易衝突時，MongoDB 驅動程式會按交易規則重新嘗試，使新快照能看到其他已提交的變更。
+
+此設計依賴 Atlas 的交易支援及資料庫帳號對 `fragments`、`metadata` 集合的讀寫權限。**任何直接透過 MongoDB 外掛、資料庫主控台或外部程式寫入 `fragments` 的行為都會繞過這個同步機制與人類確認流程**；正式操作應走 FragmentHubDB 的受保護 API。遷移腳本屬離線作業，執行前必須停止正式寫入。
+
 ## 設定 Atlas
 
 1. 建立 Atlas Free Cluster、專用資料庫使用者（最小必要權限），設定 Network Access。
