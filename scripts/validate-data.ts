@@ -103,7 +103,7 @@ async function main() {
   }
 
   if (issues.length > 0) {
-    console.error(`FragmentHub data validation failed with ${issues.length} issue(s):\n`);
+    console.error(`FragmentHubDB data validation failed with ${issues.length} issue(s):\n`);
 
     for (const issue of issues) {
       console.error(`- ${issue.file} :: ${issue.path} :: ${issue.message}`);
@@ -113,10 +113,10 @@ async function main() {
     return;
   }
 
-  console.log(`FragmentHub data validation passed: ${fragments.length} Fragment(s).`);
+  console.log(`FragmentHubDB data validation passed: ${fragments.length} Fragment(s).`);
 }
 
 main().catch((error) => {
-  console.error("FragmentHub data validation crashed:", error);
+  console.error("FragmentHubDB data validation crashed:", error);
   process.exitCode = 1;
 });

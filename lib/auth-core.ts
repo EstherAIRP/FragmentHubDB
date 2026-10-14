@@ -14,8 +14,8 @@ export type ExpiringPayload = {
  */
 export function sessionCookieNameFor(nodeEnv: string | undefined): string {
   return nodeEnv === "production"
-    ? "__Host-fragmenthub_session"
-    : "fragmenthub_session";
+    ? "__Host-FragmentHubDB_session"
+    : "FragmentHubDB_session";
 }
 
 function safeEqual(left: string, right: string): boolean {
@@ -84,7 +84,7 @@ export function parseAllowedGitHubIds(value: string): Set<string> {
   for (const id of parts) {
     if (!/^\d+$/.test(id)) {
       throw new Error(
-        "FRAGMENTHUB_ALLOWED_GITHUB_IDS must contain only comma-separated numeric GitHub user IDs.",
+        "FragmentHubDB_ALLOWED_GITHUB_IDS must contain only comma-separated numeric GitHub user IDs.",
       );
     }
   }

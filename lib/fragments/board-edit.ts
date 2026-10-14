@@ -173,7 +173,7 @@ export function rebasePendingChanges(
  * `${boardDraftStorageKey}:${scope}`. Nothing here writes to the canonical
  * data store.
  */
-export const boardDraftStorageKey = "fragmenthub:board-draft:v1";
+export const boardDraftStorageKey = "FragmentHubDB:board-draft:v1";
 
 export type BoardDraft = {
   scope: string;

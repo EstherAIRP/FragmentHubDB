@@ -21,19 +21,19 @@ export class GitHubApiError extends Error {
 
 export function getGitHubConfigFromEnv(): GitHubClientConfig {
   const repository =
-    process.env.FRAGMENTHUB_GITHUB_REPOSITORY ?? "EstherAIRP/FragmentHub";
+    process.env.FragmentHubDB_GITHUB_REPOSITORY ?? "EstherAIRP/FragmentHubDB";
   const [owner, repo] = repository.split("/");
-  const token = process.env.FRAGMENTHUB_GITHUB_TOKEN;
-  const branch = process.env.FRAGMENTHUB_GITHUB_BRANCH ?? "main";
+  const token = process.env.FragmentHubDB_GITHUB_TOKEN;
+  const branch = process.env.FragmentHubDB_GITHUB_BRANCH ?? "main";
 
   if (!owner || !repo) {
     throw new Error(
-      "FRAGMENTHUB_GITHUB_REPOSITORY must use owner/repository format.",
+      "FragmentHubDB_GITHUB_REPOSITORY must use owner/repository format.",
     );
   }
 
   if (!token) {
-    throw new Error("FRAGMENTHUB_GITHUB_TOKEN is not configured.");
+    throw new Error("FragmentHubDB_GITHUB_TOKEN is not configured.");
   }
 
   return { owner, repo, branch, token };
@@ -50,7 +50,7 @@ export async function githubRequest<T>(
       Accept: "application/vnd.github+json",
       Authorization: `Bearer ${config.token}`,
       "X-GitHub-Api-Version": "2022-11-28",
-      "User-Agent": "FragmentHub",
+      "User-Agent": "FragmentHubDB",
       ...init.headers,
     },
     cache: "no-store",

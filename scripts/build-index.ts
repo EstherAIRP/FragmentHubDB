@@ -19,11 +19,11 @@ async function main() {
   );
 
   console.log(
-    `FragmentHub index generated: ${index.length} record(s) -> generated/index.json`,
+    `FragmentHubDB index generated: ${index.length} record(s) -> generated/index.json`,
   );
 }
 
 main().catch((error) => {
-  console.error("FragmentHub index build failed:", error);
+  console.error("FragmentHubDB index build failed:", error);
   process.exitCode = 1;
 });

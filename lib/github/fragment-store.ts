@@ -79,7 +79,7 @@ async function listFragmentPaths(config: GitHubClientConfig) {
 
   if (tree.truncated) {
     throw new Error(
-      "GitHub tree response was truncated; FragmentHub cannot safely allocate IDs.",
+      "GitHub tree response was truncated; FragmentHubDB cannot safely allocate IDs.",
     );
   }
 
@@ -346,7 +346,7 @@ export async function deleteGitHubFragment(
 
 /**
  * Writes a batch of status-only changes as ONE commit on the configured
- * branch (all-or-nothing). Uses the same server-side FRAGMENTHUB_GITHUB_TOKEN
+ * branch (all-or-nothing). Uses the same server-side FragmentHubDB_GITHUB_TOKEN
  * config as the single-fragment write path; see lib/fragments/status-batch.ts.
  */
 export async function applyGitHubStatusBatch(

@@ -1,8 +1,8 @@
-# FragmentHub ChatGPT Prompt Policy
+# FragmentHubDB ChatGPT Prompt Policy
 
 這個目錄只保存 **ChatGPT 操作規則的參考文件**，不是 Web Runtime Prompt。
 
-FragmentHub Web 不呼叫 OpenAI API，也不載入這裡的 Prompt 執行 AI 分析。
+FragmentHubDB Web 不呼叫 OpenAI API，也不載入這裡的 Prompt 執行 AI 分析。
 
 正式規則來源：
 
@@ -47,7 +47,7 @@ ChatGPT 整理完成後必須再次顯示最終 Fragment，取得使用者確認
 
 ## Web 邊界
 
-以下行為不屬於 FragmentHub Web：
+以下行為不屬於 FragmentHubDB Web：
 
 - 模型推論
 - AI 分類

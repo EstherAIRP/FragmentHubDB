@@ -53,7 +53,7 @@ Fragment Hub 不是傳統 Todo List，也不是單純筆記系統。
 第一版只使用一個 Private Repository：
 
 ```text
-FragmentHub
+FragmentHubDB
 ```
 
 同一個 Repository 保存：
@@ -521,13 +521,13 @@ ID 產生機制需避免平行寫入造成重複，實作階段另行定義分�
 第一版只建立一個 Private Repository：
 
 ```text
-FragmentHub
+FragmentHubDB
 ```
 
 建議結構：
 
 ```text
-FragmentHub/
+FragmentHubDB/
 ├─ app/                    # Next.js App Router
 ├─ components/             # UI 元件
 ├─ lib/                    # 核心邏輯
@@ -684,7 +684,7 @@ Fragment 與 index 僅能由 Server-side 程式讀取。
                   GitHub API
                        │
                        ▼
-               FragmentHub Web
+               FragmentHubDB Web
         瀏覽 / 搜尋 / 篩選 / 編輯 / 管理
 ```
 
@@ -700,7 +700,7 @@ Fragment 與 index 僅能由 Server-side 程式讀取。
 - 依 ID 延續討論
 - 經確認後建立或更新 Fragment
 
-#### FragmentHub Web
+#### FragmentHubDB Web
 
 - GitHub OAuth Login
 - Dashboard
@@ -1009,15 +1009,15 @@ Runtime Integration 已完成：
 
 Production Activation 尚待外部設定：
 
-- 在 Vercel 建立 FragmentHub Project
-- 連接 EstherAIRP/FragmentHub
+- 在 Vercel 建立 FragmentHubDB Project
+- 連接 EstherAIRP/FragmentHubDB
 - 建立 GitHub OAuth App
-- 設定 FRAGMENTHUB_GITHUB_CLIENT_ID
-- 設定 FRAGMENTHUB_GITHUB_CLIENT_SECRET
-- 設定 FRAGMENTHUB_PUBLIC_URL
-- 設定 FRAGMENTHUB_SESSION_SECRET
-- 設定 FRAGMENTHUB_ALLOWED_GITHUB_IDS
-- 設定 FRAGMENTHUB_GITHUB_TOKEN
+- 設定 FragmentHubDB_GITHUB_CLIENT_ID
+- 設定 FragmentHubDB_GITHUB_CLIENT_SECRET
+- 設定 FragmentHubDB_PUBLIC_URL
+- 設定 FragmentHubDB_SESSION_SECRET
+- 設定 FragmentHubDB_ALLOWED_GITHUB_IDS
+- 設定 FragmentHubDB_GITHUB_TOKEN
 - 執行首次 production build 與 runtime 驗收
 
 Authentication 規格見 `docs/AUTHENTICATION.md`。

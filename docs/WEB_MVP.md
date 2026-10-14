@@ -1,4 +1,4 @@
-# FragmentHub Web MVP
+# FragmentHubDB Web MVP
 
 > Phase：4 — Web MVP
 > 狀態：完成
@@ -6,7 +6,7 @@
 
 ## 1. Web 的責任
 
-FragmentHub Web 負責：
+FragmentHubDB Web 負責：
 
 - GitHub OAuth 登入門
 - 看板首頁
@@ -51,15 +51,15 @@ GitHub OAuth 登入頁。
 
 流程：
 
-GitHub OAuth → numeric GitHub ID allowlist → FragmentHub signed session。
+GitHub OAuth → numeric GitHub ID allowlist → FragmentHubDB signed session。
 
 需要環境變數：
 
-- FRAGMENTHUB_GITHUB_CLIENT_ID
-- FRAGMENTHUB_GITHUB_CLIENT_SECRET
-- FRAGMENTHUB_PUBLIC_URL
-- FRAGMENTHUB_SESSION_SECRET
-- FRAGMENTHUB_ALLOWED_GITHUB_IDS
+- FragmentHubDB_GITHUB_CLIENT_ID
+- FragmentHubDB_GITHUB_CLIENT_SECRET
+- FragmentHubDB_PUBLIC_URL
+- FragmentHubDB_SESSION_SECRET
+- FragmentHubDB_ALLOWED_GITHUB_IDS
 
 Session 使用 HttpOnly Cookie。
 

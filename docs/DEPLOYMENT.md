@@ -1,14 +1,14 @@
-# FragmentHub Deployment
+# FragmentHubDB Deployment
 
 > Phase：5 — GitHub / Vercel Integration  
-> Architecture：ChatGPT → GitHub JSON ← FragmentHub Web
+> Architecture：ChatGPT → GitHub JSON ← FragmentHubDB Web
 
 ## 1. Runtime data flow
 
-Production Web uses GitHub as the live data source when `FRAGMENTHUB_GITHUB_TOKEN` exists.
+Production Web uses GitHub as the live data source when `FragmentHubDB_GITHUB_TOKEN` exists.
 
 ```text
-FragmentHub Web
+FragmentHubDB Web
     ↓
 authenticated API route
     ↓
@@ -21,14 +21,14 @@ data/fragments/F-xxxxxx.json
 
 After a successful write, Web reads GitHub directly, so the new Fragment is visible without waiting for a Vercel rebuild.
 
-Without `FRAGMENTHUB_GITHUB_TOKEN`, local development falls back to the checked-out `data/fragments/` directory and Web save is disabled.
+Without `FragmentHubDB_GITHUB_TOKEN`, local development falls back to the checked-out `data/fragments/` directory and Web save is disabled.
 
 ## 2. Required Vercel project
 
 Import the private GitHub repository:
 
 ```text
-EstherAIRP/FragmentHub
+EstherAIRP/FragmentHubDB
 ```
 
 Recommended settings:
@@ -42,7 +42,7 @@ No GitHub Actions deployment workflow is required. Use Vercel Git Integration.
 
 ## 3. GitHub OAuth App
 
-Before setting Vercel secrets, create a GitHub OAuth App for FragmentHub.
+Before setting Vercel secrets, create a GitHub OAuth App for FragmentHubDB.
 
 GitHub → Settings → Developer settings → OAuth Apps → New OAuth App.
 
@@ -50,16 +50,16 @@ Set:
 
 ~~~text
 Application name:
-FragmentHub
+FragmentHubDB
 
 Homepage URL:
-<FRAGMENTHUB_PUBLIC_URL>
+<FragmentHubDB_PUBLIC_URL>
 
 Authorization callback URL:
-<FRAGMENTHUB_PUBLIC_URL>/api/auth/callback
+<FragmentHubDB_PUBLIC_URL>/api/auth/callback
 ~~~
 
-FragmentHub v0.1 uses the production callback only. Arbitrary Vercel Preview URLs are not OAuth callback targets.
+FragmentHubDB v0.1 uses the production callback only. Arbitrary Vercel Preview URLs are not OAuth callback targets.
 
 After creating the OAuth App, copy its Client ID and generate a Client Secret. Store both only in Vercel Environment Variables.
 
@@ -70,42 +70,42 @@ The OAuth request intentionally does not request repository scopes. It uses the 
 Production requires:
 
 ```text
-FRAGMENTHUB_GITHUB_CLIENT_ID
-FRAGMENTHUB_GITHUB_CLIENT_SECRET
-FRAGMENTHUB_PUBLIC_URL
-FRAGMENTHUB_SESSION_SECRET
-FRAGMENTHUB_ALLOWED_GITHUB_IDS
-FRAGMENTHUB_GITHUB_TOKEN
+FragmentHubDB_GITHUB_CLIENT_ID
+FragmentHubDB_GITHUB_CLIENT_SECRET
+FragmentHubDB_PUBLIC_URL
+FragmentHubDB_SESSION_SECRET
+FragmentHubDB_ALLOWED_GITHUB_IDS
+FragmentHubDB_GITHUB_TOKEN
 ```
 
 Optional because defaults already exist:
 
 ```text
-FRAGMENTHUB_GITHUB_REPOSITORY=EstherAIRP/FragmentHub
-FRAGMENTHUB_GITHUB_BRANCH=main
+FragmentHubDB_GITHUB_REPOSITORY=EstherAIRP/FragmentHubDB
+FragmentHubDB_GITHUB_BRANCH=main
 ```
 
-### FRAGMENTHUB_GITHUB_CLIENT_ID / FRAGMENTHUB_GITHUB_CLIENT_SECRET
+### FragmentHubDB_GITHUB_CLIENT_ID / FragmentHubDB_GITHUB_CLIENT_SECRET
 
 GitHub OAuth App credentials used only for user authentication.
 
 OAuth App callback URL must be:
 
 ```text
-<FRAGMENTHUB_PUBLIC_URL>/api/auth/callback
+<FragmentHubDB_PUBLIC_URL>/api/auth/callback
 ```
 
-### FRAGMENTHUB_PUBLIC_URL
+### FragmentHubDB_PUBLIC_URL
 
 Production origin only, for example:
 
 ```text
-https://fragmenthub.example.com
+https://FragmentHubDB.example.com
 ```
 
 v0.1 does not implement arbitrary Vercel Preview OAuth handoff.
 
-### FRAGMENTHUB_ALLOWED_GITHUB_IDS
+### FragmentHubDB_ALLOWED_GITHUB_IDS
 
 Comma-separated immutable numeric GitHub user IDs.
 
@@ -124,9 +124,9 @@ GET https://api.github.com/users/<github-login>
 → read the numeric "id" field
 ```
 
-For a single-user FragmentHub, configure exactly one numeric user ID.
+For a single-user FragmentHubDB, configure exactly one numeric user ID.
 
-### FRAGMENTHUB_SESSION_SECRET
+### FragmentHubDB_SESSION_SECRET
 
 Random session-signing secret. A suitable value can be generated locally with:
 
@@ -134,12 +134,12 @@ Random session-signing secret. A suitable value can be generated locally with:
 openssl rand -hex 32
 ```
 
-### FRAGMENTHUB_GITHUB_TOKEN
+### FragmentHubDB_GITHUB_TOKEN
 
 Use a fine-grained GitHub token scoped to:
 
 ```text
-EstherAIRP/FragmentHub
+EstherAIRP/FragmentHubDB
 ```
 
 Minimum repository permission:
@@ -223,16 +223,16 @@ GitHub OAuth
 → PKCE + state verification
 → GET /user
 → numeric GitHub ID allowlist
-→ signed FragmentHub session
+→ signed FragmentHubDB session
 ```
 
 Production session uses an HttpOnly, Secure, SameSite=Lax cookie.
 
 The OAuth user access token is used only to resolve GitHub identity and is not persisted.
 
-Save APIs independently verify the FragmentHub session before performing GitHub writes.
+Save APIs independently verify the FragmentHubDB session before performing GitHub writes.
 
-FRAGMENTHUB_GITHUB_TOKEN remains a separate server credential for canonical Fragment data access.
+FragmentHubDB_GITHUB_TOKEN remains a separate server credential for canonical Fragment data access.
 
 Logout clears the session cookie.
 
@@ -242,7 +242,7 @@ After the first production deployment:
 
 1. Opening `/` while logged out redirects to `/login`.
 2. GitHub OAuth starts from `/api/auth/login`.
-3. Invalid / cancelled OAuth does not create a FragmentHub session.
+3. Invalid / cancelled OAuth does not create a FragmentHubDB session.
 4. GitHub identity not present in the numeric ID allowlist is rejected.
 5. Allowed GitHub identity opens Dashboard.
 6. Manual create shows a readable content confirmation dialog before save.

@@ -9,7 +9,7 @@ export function AppNav({ session }: { session: AuthSession }) {
         <Link className="brand" href="/">
           <span className="brandMark">F</span>
           <span>
-            <strong>FragmentHub</strong>
+            <strong>FragmentHubDB</strong>
             <small>私人 Fragment 工作區</small>
           </span>
         </Link>

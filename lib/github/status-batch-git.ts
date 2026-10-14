@@ -12,7 +12,7 @@ import {
  *
  * Deliberately free of `server-only` and of any token handling so it can be
  * unit-tested with a fake requester. The real requester (githubRequest bound
- * to FRAGMENTHUB_GITHUB_TOKEN) is injected from lib/github/fragment-store.ts,
+ * to FragmentHubDB_GITHUB_TOKEN) is injected from lib/github/fragment-store.ts,
  * which is server-only.
  */
 
@@ -50,7 +50,7 @@ function assertSha(value: unknown, what: string): string {
 
 function encodeRefPath(branch: string): string {
   if (!branch || branch.split("/").some((part) => !part || part === "." || part === "..")) {
-    throw new Error("FRAGMENTHUB_GITHUB_BRANCH is not a valid branch name.");
+    throw new Error("FragmentHubDB_GITHUB_BRANCH is not a valid branch name.");
   }
   return branch.split("/").map(encodeURIComponent).join("/");
 }
@@ -90,7 +90,7 @@ export function createGitHubStatusBatchApi(
 
       if (tree.truncated) {
         throw new Error(
-          "GitHub tree response was truncated; FragmentHub cannot safely validate the batch.",
+          "GitHub tree response was truncated; FragmentHubDB cannot safely validate the batch.",
         );
       }
 

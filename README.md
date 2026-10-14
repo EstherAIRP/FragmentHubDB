@@ -1,4 +1,4 @@
-# FragmentHub
+# FragmentHubDB
 
 以 ChatGPT 協助整理工作、生活、學習與靈感碎片的私人管理系統。每筆 Fragment 都保留原始輸入，經使用者確認後保存為 GitHub JSON，再透過 Web 瀏覽與管理。
 
@@ -31,7 +31,7 @@ npm run dev
 
 開啟 [http://localhost:3000](http://localhost:3000)。私人頁面需要登入；未設定 OAuth 時，仍可執行資料驗證與測試，但無法瀏覽私人內容。
 
-本機 OAuth 請使用對應的 GitHub OAuth App，將 `FRAGMENTHUB_PUBLIC_URL` 設為 `http://localhost:3000`，Callback URL 設為 `http://localhost:3000/api/auth/callback`。正式環境使用正式 HTTPS 網址與對應的 Callback，詳見[部署說明](docs/DEPLOYMENT.md)。
+本機 OAuth 請使用對應的 GitHub OAuth App，將 `FragmentHubDB_PUBLIC_URL` 設為 `http://localhost:3000`，Callback URL 設為 `http://localhost:3000/api/auth/callback`。正式環境使用正式 HTTPS 網址與對應的 Callback，詳見[部署說明](docs/DEPLOYMENT.md)。
 
 ### 2. 設定環境變數
 
@@ -39,16 +39,16 @@ npm run dev
 
 | 變數 | 用途 |
 | --- | --- |
-| `FRAGMENTHUB_GITHUB_CLIENT_ID` | GitHub OAuth App Client ID |
-| `FRAGMENTHUB_GITHUB_CLIENT_SECRET` | GitHub OAuth App Client Secret |
-| `FRAGMENTHUB_PUBLIC_URL` | 網站 origin，不含路徑或查詢參數；正式環境須使用 HTTPS |
-| `FRAGMENTHUB_SESSION_SECRET` | 隨機 Session 簽章密鑰，至少 32 個字元 |
-| `FRAGMENTHUB_ALLOWED_GITHUB_IDS` | 允許登入的不可變數字 GitHub user ID，以逗號分隔 |
-| `FRAGMENTHUB_GITHUB_TOKEN` | GitHub 資料讀寫憑證；限定目標 Repository，授予 `Contents: Read and write` |
-| `FRAGMENTHUB_GITHUB_REPOSITORY` | 選填，預設 `EstherAIRP/FragmentHub` |
-| `FRAGMENTHUB_GITHUB_BRANCH` | 選填，預設 `main` |
+| `FragmentHubDB_GITHUB_CLIENT_ID` | GitHub OAuth App Client ID |
+| `FragmentHubDB_GITHUB_CLIENT_SECRET` | GitHub OAuth App Client Secret |
+| `FragmentHubDB_PUBLIC_URL` | 網站 origin，不含路徑或查詢參數；正式環境須使用 HTTPS |
+| `FragmentHubDB_SESSION_SECRET` | 隨機 Session 簽章密鑰，至少 32 個字元 |
+| `FragmentHubDB_ALLOWED_GITHUB_IDS` | 允許登入的不可變數字 GitHub user ID，以逗號分隔 |
+| `FragmentHubDB_GITHUB_TOKEN` | GitHub 資料讀寫憑證；限定目標 Repository，授予 `Contents: Read and write` |
+| `FragmentHubDB_GITHUB_REPOSITORY` | 選填，預設 `EstherAIRP/FragmentHubDB` |
+| `FragmentHubDB_GITHUB_BRANCH` | 選填，預設 `main` |
 
-**資料來源取決於是否設定 `FRAGMENTHUB_GITHUB_TOKEN`：**
+**資料來源取決於是否設定 `FragmentHubDB_GITHUB_TOKEN`：**
 
 - 未設定：讀取本機 `data/fragments/`，Web 正式儲存停用。
 - 已設定：讀取 GitHub 即時資料，確認後的 Web 儲存會寫入指定 Repository／Branch，產生 Git commit。開發時請確認目標設定。
@@ -87,7 +87,7 @@ OAuth 憑證只負責確認登入身分；OAuth user access token 不持久保�
 ## 架構與資料規則
 
 ```text
-ChatGPT                                 FragmentHub Web
+ChatGPT                                 FragmentHubDB Web
 分析／分類／提問／人工確認               瀏覽／搜尋／手動管理／人工確認
     │                                         │
     │                              已驗證身分的 API + Server-side Token

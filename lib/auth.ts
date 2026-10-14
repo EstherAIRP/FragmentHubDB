@@ -23,8 +23,8 @@ function sessionCookieName() {
 
 function flowCookieName() {
   return process.env.NODE_ENV === "production"
-    ? "__Host-fragmenthub_oauth"
-    : "fragmenthub_oauth";
+    ? "__Host-FragmentHubDB_oauth"
+    : "FragmentHubDB_oauth";
 }
 
 type OAuthFlow = ExpiringPayload & {
@@ -54,32 +54,32 @@ export type AuthConfigIssue = {
 export function getAuthConfigIssues(): AuthConfigIssue[] {
   const issues: AuthConfigIssue[] = [];
 
-  const clientId = process.env.FRAGMENTHUB_GITHUB_CLIENT_ID?.trim() ?? "";
+  const clientId = process.env.FragmentHubDB_GITHUB_CLIENT_ID?.trim() ?? "";
   const clientSecret =
-    process.env.FRAGMENTHUB_GITHUB_CLIENT_SECRET?.trim() ?? "";
-  const publicUrl = process.env.FRAGMENTHUB_PUBLIC_URL?.trim() ?? "";
+    process.env.FragmentHubDB_GITHUB_CLIENT_SECRET?.trim() ?? "";
+  const publicUrl = process.env.FragmentHubDB_PUBLIC_URL?.trim() ?? "";
   const sessionSecret =
-    process.env.FRAGMENTHUB_SESSION_SECRET?.trim() ?? "";
+    process.env.FragmentHubDB_SESSION_SECRET?.trim() ?? "";
   const allowedIds =
-    process.env.FRAGMENTHUB_ALLOWED_GITHUB_IDS?.trim() ?? "";
+    process.env.FragmentHubDB_ALLOWED_GITHUB_IDS?.trim() ?? "";
 
   if (!clientId) {
     issues.push({
-      variable: "FRAGMENTHUB_GITHUB_CLIENT_ID",
+      variable: "FragmentHubDB_GITHUB_CLIENT_ID",
       message: "未設定 GitHub OAuth Client ID。",
     });
   }
 
   if (!clientSecret) {
     issues.push({
-      variable: "FRAGMENTHUB_GITHUB_CLIENT_SECRET",
+      variable: "FragmentHubDB_GITHUB_CLIENT_SECRET",
       message: "未設定 GitHub OAuth Client Secret。",
     });
   }
 
   if (!publicUrl) {
     issues.push({
-      variable: "FRAGMENTHUB_PUBLIC_URL",
+      variable: "FragmentHubDB_PUBLIC_URL",
       message: "未設定正式網站 URL。",
     });
   } else {
@@ -87,7 +87,7 @@ export function getAuthConfigIssues(): AuthConfigIssue[] {
       parsePublicUrl(publicUrl);
     } catch (error) {
       issues.push({
-        variable: "FRAGMENTHUB_PUBLIC_URL",
+        variable: "FragmentHubDB_PUBLIC_URL",
         message:
           error instanceof Error ? error.message : "Public URL 格式不正確。",
       });
@@ -96,14 +96,14 @@ export function getAuthConfigIssues(): AuthConfigIssue[] {
 
   if (sessionSecret.length < 32) {
     issues.push({
-      variable: "FRAGMENTHUB_SESSION_SECRET",
+      variable: "FragmentHubDB_SESSION_SECRET",
       message: "至少需要 32 個字元。",
     });
   }
 
   if (!allowedIds) {
     issues.push({
-      variable: "FRAGMENTHUB_ALLOWED_GITHUB_IDS",
+      variable: "FragmentHubDB_ALLOWED_GITHUB_IDS",
       message: "未設定允許登入的 numeric GitHub user ID。",
     });
   } else {
@@ -111,13 +111,13 @@ export function getAuthConfigIssues(): AuthConfigIssue[] {
       const parsed = parseAllowedGitHubIds(allowedIds);
       if (parsed.size === 0) {
         issues.push({
-          variable: "FRAGMENTHUB_ALLOWED_GITHUB_IDS",
+          variable: "FragmentHubDB_ALLOWED_GITHUB_IDS",
           message: "至少需要一個 numeric GitHub user ID。",
         });
       }
     } catch (error) {
       issues.push({
-        variable: "FRAGMENTHUB_ALLOWED_GITHUB_IDS",
+        variable: "FragmentHubDB_ALLOWED_GITHUB_IDS",
         message:
           error instanceof Error
             ? error.message
@@ -140,54 +140,54 @@ function parsePublicUrl(value: string): string {
     url.pathname !== "/"
   ) {
     throw new Error(
-      "FRAGMENTHUB_PUBLIC_URL must be an origin without path, query, or credentials.",
+      "FragmentHubDB_PUBLIC_URL must be an origin without path, query, or credentials.",
     );
   }
 
   const production = process.env.NODE_ENV === "production";
 
   if (production && url.protocol !== "https:") {
-    throw new Error("FRAGMENTHUB_PUBLIC_URL must use HTTPS in production.");
+    throw new Error("FragmentHubDB_PUBLIC_URL must use HTTPS in production.");
   }
 
   if (!production && !["http:", "https:"].includes(url.protocol)) {
-    throw new Error("FRAGMENTHUB_PUBLIC_URL must use HTTP or HTTPS.");
+    throw new Error("FragmentHubDB_PUBLIC_URL must use HTTP or HTTPS.");
   }
 
   return url.origin;
 }
 
 export function getGitHubOAuthConfig(): GitHubOAuthConfig {
-  const clientId = process.env.FRAGMENTHUB_GITHUB_CLIENT_ID?.trim() ?? "";
+  const clientId = process.env.FragmentHubDB_GITHUB_CLIENT_ID?.trim() ?? "";
   const clientSecret =
-    process.env.FRAGMENTHUB_GITHUB_CLIENT_SECRET?.trim() ?? "";
-  const publicUrlRaw = process.env.FRAGMENTHUB_PUBLIC_URL?.trim() ?? "";
+    process.env.FragmentHubDB_GITHUB_CLIENT_SECRET?.trim() ?? "";
+  const publicUrlRaw = process.env.FragmentHubDB_PUBLIC_URL?.trim() ?? "";
   const sessionSecret =
-    process.env.FRAGMENTHUB_SESSION_SECRET?.trim() ?? "";
+    process.env.FragmentHubDB_SESSION_SECRET?.trim() ?? "";
   const allowedGitHubIds = parseAllowedGitHubIds(
-    process.env.FRAGMENTHUB_ALLOWED_GITHUB_IDS ?? "",
+    process.env.FragmentHubDB_ALLOWED_GITHUB_IDS ?? "",
   );
 
   if (!clientId) {
-    throw new Error("FRAGMENTHUB_GITHUB_CLIENT_ID is not configured.");
+    throw new Error("FragmentHubDB_GITHUB_CLIENT_ID is not configured.");
   }
 
   if (!clientSecret) {
-    throw new Error("FRAGMENTHUB_GITHUB_CLIENT_SECRET is not configured.");
+    throw new Error("FragmentHubDB_GITHUB_CLIENT_SECRET is not configured.");
   }
 
   if (!publicUrlRaw) {
-    throw new Error("FRAGMENTHUB_PUBLIC_URL is not configured.");
+    throw new Error("FragmentHubDB_PUBLIC_URL is not configured.");
   }
 
   if (sessionSecret.length < 32) {
     throw new Error(
-      "FRAGMENTHUB_SESSION_SECRET must contain at least 32 characters.",
+      "FragmentHubDB_SESSION_SECRET must contain at least 32 characters.",
     );
   }
 
   if (allowedGitHubIds.size === 0) {
-    throw new Error("FRAGMENTHUB_ALLOWED_GITHUB_IDS is not configured.");
+    throw new Error("FragmentHubDB_ALLOWED_GITHUB_IDS is not configured.");
   }
 
   return {
@@ -275,7 +275,7 @@ export async function exchangeGitHubCode(
       headers: {
         Accept: "application/json",
         "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": "FragmentHub",
+        "User-Agent": "FragmentHubDB",
       },
       body: new URLSearchParams({
         client_id: config.clientId,
@@ -321,7 +321,7 @@ export async function fetchGitHubIdentity(
       Accept: "application/vnd.github+json",
       Authorization: `Bearer ${accessToken}`,
       "X-GitHub-Api-Version": "2022-11-28",
-      "User-Agent": "FragmentHub",
+      "User-Agent": "FragmentHubDB",
     },
     cache: "no-store",
   });

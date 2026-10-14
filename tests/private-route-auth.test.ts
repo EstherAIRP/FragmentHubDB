@@ -118,19 +118,19 @@ test("proxy redirects cookieless private requests to /login", () => {
     const variants: Record<string, string>[] = [{}, { RSC: "1" }];
     for (const headers of variants) {
       const response = proxy(
-        new NextRequest(`https://fragmenthub.test${pathname}`, { headers }),
+        new NextRequest(`https://FragmentHubDB.test${pathname}`, { headers }),
       );
       assert.equal(response.status, 307, pathname);
       assert.equal(
         response.headers.get("location"),
-        "https://fragmenthub.test/login",
+        "https://FragmentHubDB.test/login",
       );
     }
   }
 });
 
 test("proxy lets requests with a session cookie through to the page gate", () => {
-  const request = new NextRequest("https://fragmenthub.test/fragments", {
+  const request = new NextRequest("https://FragmentHubDB.test/fragments", {
     headers: {
       cookie: `${sessionCookieNameFor(process.env.NODE_ENV)}=signed.value`,
     },

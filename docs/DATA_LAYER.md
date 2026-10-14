@@ -1,4 +1,4 @@
-# FragmentHub Data Layer
+# FragmentHubDB Data Layer
 
 > Phase：2 — Repository 與資料層  
 > 狀態：實作基準
@@ -180,15 +180,15 @@ next build
 Remote Store 使用以下 Server-side 環境變數：
 
 ```text
-FRAGMENTHUB_GITHUB_TOKEN
-FRAGMENTHUB_GITHUB_REPOSITORY
-FRAGMENTHUB_GITHUB_BRANCH
+FragmentHubDB_GITHUB_TOKEN
+FragmentHubDB_GITHUB_REPOSITORY
+FragmentHubDB_GITHUB_BRANCH
 ```
 
 預設 Repository：
 
 ```text
-EstherAIRP/FragmentHub
+EstherAIRP/FragmentHubDB
 ```
 
 預設 Branch：

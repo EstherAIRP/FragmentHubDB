@@ -1,8 +1,8 @@
-# FragmentHub Agent 規則
+# FragmentHubDB Agent 規則
 
 ## 一、產品規則（Product Rules）
 
-FragmentHub 的設計核心是由使用者確認後才正式生效。
+FragmentHubDB 的設計核心是由使用者確認後才正式生效。
 
 在實作 AI 輔助的 Fragment（片段）工作流程時，必須遵守以下規則：
 
@@ -31,11 +31,11 @@ FragmentHub 的設計核心是由使用者確認後才正式生效。
 - 即使 GitHub 儲存庫是私有的，也不得假設部署後的網站同樣是私有的。
 - 不得將 Fragment 資料、GitHub Token、模型 API 金鑰或其他機密資訊放置於 `public/` 目錄下。
 - GitHub 存取操作必須在伺服器端執行。
-- FragmentHub Web 不得直接呼叫模型 API。
+- FragmentHubDB Web 不得直接呼叫模型 API。
 - 未經身分驗證，不得開放正式環境存取私有 Fragment 內容。
 - 網站身分驗證採用 GitHub OAuth、PKCE 與簽章工作階段 Cookie。
-- 使用者授權必須依據 `FRAGMENTHUB_ALLOWED_GITHUB_IDS` 中設定的不可變更 GitHub 數字使用者 ID，不得使用可變更的使用者名稱作為授權依據。
-- OAuth 身分驗證憑證必須與用於正式資料寫入的 `FRAGMENTHUB_GITHUB_TOKEN` 分開管理。
+- 使用者授權必須依據 `FragmentHubDB_ALLOWED_GITHUB_IDS` 中設定的不可變更 GitHub 數字使用者 ID，不得使用可變更的使用者名稱作為授權依據。
+- OAuth 身分驗證憑證必須與用於正式資料寫入的 `FragmentHubDB_GITHUB_TOKEN` 分開管理。
 - 不得將 OAuth 使用者存取權杖儲存或重複用作 Fragment 資料的寫入憑證。
 
 ## 四、實作範圍（Scope）
@@ -53,8 +53,8 @@ FragmentHub 的設計核心是由使用者確認後才正式生效。
   - `next_action`：下一步行動
   - `notes`：備註
 - 最終整理時，必須透過程式組裝資料，確保已確認的分類中繼資料與 `original_input` 完全保留，不得由 AI 改寫。
-- ChatGPT 是唯一的 AI 分析介面。 不得在 FragmentHub Web 中新增模型 API 路由、模型 SDK 或 AI 自動分類功能。
-- FragmentHub Web 的手動新增與編輯功能，可以對草稿進行驗證與預覽。
+- ChatGPT 是唯一的 AI 分析介面。 不得在 FragmentHubDB Web 中新增模型 API 路由、模型 SDK 或 AI 自動分類功能。
+- FragmentHubDB Web 的手動新增與編輯功能，可以對草稿進行驗證與預覽。
 - 正式環境的資料寫入必須透過已完成身分驗證的 Phase 5 GitHub API 路由，並保留樂觀並行控制機制。
 
 核心原則：AI 負責提出建議與整理內容，使用者負責確認決策；只有經過確認及驗證的資料，才能寫入正式儲存區。

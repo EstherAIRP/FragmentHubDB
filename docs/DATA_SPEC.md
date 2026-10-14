@@ -1,4 +1,4 @@
-# FragmentHub 資料規格
+# FragmentHubDB 資料規格
 
 > 規格版本：v0.1  
 > 對應開發階段：Phase 1 — 資料規格  
@@ -6,7 +6,7 @@
 
 ## 1. 資料設計原則
 
-FragmentHub 採單一資料池。所有 Fragment 都存放於：
+FragmentHubDB 採單一資料池。所有 Fragment 都存放於：
 
 ```text
 data/fragments/
@@ -411,7 +411,7 @@ v0.1 支援：
 - `web`
 
 `chatgpt`：由 ChatGPT 對話流程建立。  
-`web`：由 FragmentHub 網頁流程建立。
+`web`：由 FragmentHubDB 網頁流程建立。
 
 ---
 

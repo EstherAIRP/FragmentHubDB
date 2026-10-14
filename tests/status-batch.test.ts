@@ -38,8 +38,8 @@ function fragment(overrides: Partial<Fragment> = {}): Fragment {
     tags: ["fragment-management"],
     project: null,
     related: [],
-    title: "FragmentHub note",
-    summary: "A note about FragmentHub.",
+    title: "FragmentHubDB note",
+    summary: "A note about FragmentHubDB.",
     next_action: null,
     original_input: "note",
     notes: null,
@@ -151,7 +151,7 @@ class FakeGitHub {
     const body = init.body ? JSON.parse(init.body) : undefined;
     this.calls.push({ method, pathname, body });
 
-    const prefix = "/repos/EstherAIRP/FragmentHub";
+    const prefix = "/repos/EstherAIRP/FragmentHubDB";
     assert.ok(pathname.startsWith(prefix), `unexpected path ${pathname}`);
     const rest = pathname.slice(prefix.length);
     let match: RegExpExecArray | null;
@@ -223,7 +223,7 @@ class FakeGitHub {
 
 function apiFor(github: FakeGitHub) {
   return createGitHubStatusBatchApi(
-    { owner: "EstherAIRP", repo: "FragmentHub", branch: "main" },
+    { owner: "EstherAIRP", repo: "FragmentHubDB", branch: "main" },
     github.request,
   );
 }

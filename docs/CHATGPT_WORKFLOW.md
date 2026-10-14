@@ -1,7 +1,7 @@
-# FragmentHub ChatGPT 操作契約
+# FragmentHubDB ChatGPT 操作契約
 
 > 對應階段：Phase 3  
-> 核心原則：ChatGPT 是唯一 AI 分析入口；FragmentHub Web 不呼叫模型 API。
+> 核心原則：ChatGPT 是唯一 AI 分析入口；FragmentHubDB Web 不呼叫模型 API。
 
 ## 1. 分工
 
@@ -12,11 +12,11 @@ ChatGPT
 GitHub
 → Canonical Fragment JSON
 
-FragmentHub Web
+FragmentHubDB Web
 → 瀏覽 / 搜尋 / 篩選 / 手動管理
 ```
 
-FragmentHub Repository 不提供 `/api/analyze`、`/api/interview`、`/api/finalize` 等 AI Runtime API，也不需要 `OPENAI_API_KEY`。
+FragmentHubDB Repository 不提供 `/api/analyze`、`/api/interview`、`/api/finalize` 等 AI Runtime API，也不需要 `OPENAI_API_KEY`。
 
 ## 2. ChatGPT 建立流程
 
