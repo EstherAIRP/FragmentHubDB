@@ -45,10 +45,9 @@ export async function withMongoFragmentWrite<T>(
       writeConcern: { w: "majority" },
     });
 
-    if (result === undefined) {
-      throw new Error("MongoDB Fragment transaction did not return a result.");
-    }
-    return result;
+    // Void mutations (such as deletion) legitimately return undefined.
+    // The driver throws on an unsuccessful transaction.
+    return result as T;
   } finally {
     await session.endSession();
   }
