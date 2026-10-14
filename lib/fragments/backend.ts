@@ -19,9 +19,7 @@ export function fragmentBackend(): FragmentBackend {
 export function isFragmentWriteConfigured(): boolean {
   switch (fragmentBackend()) {
     case "mongodb":
-      return Boolean(
-        process.env.FragmentHubDB_MONGODB_URI || process.env.MONGODB_URI,
-      );
+      return Boolean(process.env.FragmentHubDB_MONGODB_URI);
     case "github":
       return Boolean(process.env.FragmentHubDB_GITHUB_TOKEN);
     case "local":
