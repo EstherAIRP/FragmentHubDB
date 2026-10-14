@@ -253,8 +253,8 @@ export type StatusBatchOutcome =
 // status code instead. Every non-2xx response means nothing was written.
 export const statusBatchErrorMessages = {
   badRequest: "沒有可寫入的變更，或變更內容不正確。",
-  unavailable: "GitHub Remote Store 尚未設定，無法儲存。",
-  upstream: "寫入 GitHub 失敗，請稍後再試。",
+  unavailable: "資料儲存服務尚未設定，無法儲存。",
+  upstream: "資料儲存失敗，請稍後再試。",
   fallback: "儲存失敗，請稍後再試。",
 } as const;
 
