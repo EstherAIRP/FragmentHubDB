@@ -2,6 +2,7 @@ import { MongoServerError } from "mongodb";
 
 import { fragmentSchema, type Fragment } from "@/lib/fragment-schema";
 import { nextFragmentId } from "@/lib/fragments/id";
+import { nextUpdatedAt } from "@/lib/fragments/versioning";
 import type { NewFragment } from "@/lib/fragments/local-store";
 import {
   assertFragmentSemantics,
@@ -93,9 +94,7 @@ export async function replaceMongoFragment(
   }
 
   const all = await listMongoFragments();
-  const changedAt = new Date(
-    Math.max(Date.now(), Date.parse(current.updated_at) + 1),
-  ).toISOString();
+  const changedAt = nextUpdatedAt([current.updated_at]);
   const candidate = fragmentSchema.parse({
     ...replacement,
     id: current.id,
@@ -179,9 +178,13 @@ export async function applyMongoStatusBatch(
     const outcome = await session.withTransaction<StatusBatchOutcome>(async () => {
       const documents = await collection.find({}, { session }).toArray();
       const snapshot = documents.map(parseDocument);
-      const time = new Date(
-        Math.max(Date.now(), ...snapshot.map((item) => Date.parse(item.updated_at) + 1)),
-      ).toISOString();
+      const byId = new Map(snapshot.map((item) => [item.id, item]));
+      const time = nextUpdatedAt(
+        changes.flatMap((change) => {
+          const previous = byId.get(change.id);
+          return previous ? [previous.updated_at] : [];
+        }),
+      );
       const plan = planStatusBatch(changes, snapshot, time);
 
       if (plan.kind === "conflict") {
@@ -189,7 +192,6 @@ export async function applyMongoStatusBatch(
       }
       if (plan.kind !== "ready") return plan;
 
-      const byId = new Map(snapshot.map((item) => [item.id, item]));
       for (const write of plan.writes) {
         const previous = byId.get(write.id)!;
         const result = await collection.replaceOne(
