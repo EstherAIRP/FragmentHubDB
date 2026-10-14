@@ -2,9 +2,7 @@ name: FragmentHubDB checks
 
 on:
   pull_request:
-  push:
-    branches:
-      - feature/mongodb-atlas-store
+  workflow_dispatch:
 
 permissions:
   contents: read
