@@ -1,6 +1,6 @@
 import { MongoError, MongoServerError } from "mongodb";
 
-import { fragmentSchema, type Fragment } from "@/lib/fragment-schema";
+import type { Fragment } from "@/lib/fragment-schema";
 import { parseMongoDocument } from "@/lib/mongodb/document";
 import { nextFragmentId } from "@/lib/fragments/id";
 import { nextUpdatedAt } from "@/lib/fragments/versioning";
@@ -48,13 +48,12 @@ export async function createMongoFragment(input: NewFragment): Promise<Fragment>
     const current = await listMongoFragments();
     const id = nextFragmentId(current.map((item) => item.id));
     const now = new Date().toISOString();
-    const candidate = fragmentSchema.parse({
+    const candidate = assertFragmentSemantics({
       ...input,
       id,
       created_at: now,
       updated_at: now,
-    });
-    assertFragmentSemantics(candidate, current);
+    }, current);
 
     try {
       await collection.insertOne({ ...candidate, _id: candidate.id });
@@ -86,17 +85,12 @@ export async function replaceMongoFragment(
 
   const all = await listMongoFragments();
   const changedAt = nextUpdatedAt([current.updated_at]);
-  const candidate = fragmentSchema.parse({
+  const candidate = assertFragmentSemantics({
     ...replacement,
     id: current.id,
     created_at: current.created_at,
     updated_at: changedAt,
-  });
-  assertFragmentSemantics(
-    candidate,
-    all.filter((fragment) => fragment.id !== id),
-    { previous: current },
-  );
+  }, all.filter((fragment) => fragment.id !== id), { previous: current });
 
   if (current.type === "project" && candidate.type !== "project") {
     const children = all.filter((item) => item.id !== id && item.project === id);
