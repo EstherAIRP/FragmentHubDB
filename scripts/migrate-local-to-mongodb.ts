@@ -8,10 +8,13 @@
  * remain untouched for rollback. NEVER publish the exported JSON elsewhere.
  */
 import { isDeepStrictEqual } from "node:util";
+import { promises as fs } from "node:fs";
+import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { loadEnvConfig } from "@next/env";
 
-import { listLocalFragments } from "../lib/fragments/local-store";
+import { fragmentDirectory, listLocalFragments } from "../lib/fragments/local-store";
+import { validateFragmentJsonSchema } from "../lib/fragments/json-schema-validator";
 import { assertFragmentHubDbOrigin } from "../lib/fragments/migration-origin";
 import { planMongoImport } from "../lib/fragments/migration-plan";
 import {
@@ -60,6 +63,20 @@ async function main() {
   }).trim();
 
   const source = await listLocalFragments();
+
+  // Check the raw JSON again: listLocalFragments uses Zod, which may strip
+  // unknown keys, and a migration must never silently discard source data.
+  for (const item of source) {
+    const raw = JSON.parse(await fs.readFile(
+      path.join(fragmentDirectory, item.id + ".json"), "utf8",
+    ));
+    const issues = validateFragmentJsonSchema(raw);
+    if (issues.length > 0 || !isDeepStrictEqual(raw, item)) {
+      throw new Error("MongoDB import refused: source file " + item.id +
+        " does not match the canonical JSON schema.");
+    }
+  }
+
   const existing = await listMongoFragments();
   const plan = planMongoImport(source, existing);
   const pending = plan.pending;
@@ -108,7 +125,7 @@ async function main() {
 main()
   .catch((error: unknown) => {
     // Do not print raw driver exceptions: they may include connection details.
-    if (error instanceof Error && /^(MongoDB import refused:|Refusing MongoDB import:|No local fragments found\.|[A-Za-z0-9_$-]+:)/.test(error.message) && !/mongodb(\+srv)?:\/\//i.test(error.message)) {
+    if (error instanceof Error && /^(MongoDB import refused:|Refusing MongoDB import:)/.test(error.message)) {
       console.error("Migration failed:", error.message);
     } else {
       console.error("Migration failed. Check source validation, Atlas configuration and network access.");
