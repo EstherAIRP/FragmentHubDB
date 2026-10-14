@@ -1,6 +1,7 @@
 import { MongoError, MongoServerError } from "mongodb";
 
 import { fragmentSchema, type Fragment } from "@/lib/fragment-schema";
+import { parseMongoDocument } from "@/lib/mongodb/document";
 import { nextFragmentId } from "@/lib/fragments/id";
 import { nextUpdatedAt } from "@/lib/fragments/versioning";
 import type { NewFragment } from "@/lib/fragments/local-store";
@@ -16,7 +17,6 @@ import {
 import {
   getMongoClient,
   getMongoFragmentCollection,
-  type MongoFragmentDocument,
 } from "@/lib/mongodb/client";
 
 export class MongoFragmentConflictError extends Error {
@@ -26,25 +26,16 @@ export class MongoFragmentConflictError extends Error {
   }
 }
 
-function parseDocument(document: MongoFragmentDocument): Fragment {
-  const { _id, ...raw } = document;
-  const fragment = fragmentSchema.parse(raw);
-  if (fragment.id !== _id) {
-    throw new Error("MongoDB Fragment _id does not match the stored id.");
-  }
-  return fragment;
-}
-
 export async function listMongoFragments(): Promise<Fragment[]> {
   const collection = await getMongoFragmentCollection();
   const records = await collection.find({}).sort({ updated_at: -1, _id: 1 }).toArray();
-  return records.map(parseDocument);
+  return records.map(parseMongoDocument);
 }
 
 export async function getMongoFragment(id: string): Promise<Fragment | null> {
   const collection = await getMongoFragmentCollection();
   const record = await collection.findOne({ _id: id });
-  return record ? parseDocument(record) : null;
+  return record ? parseMongoDocument(record) : null;
 }
 
 /**
@@ -177,7 +168,7 @@ export async function applyMongoStatusBatch(
   try {
     const outcome = await session.withTransaction<StatusBatchOutcome>(async () => {
       const documents = await collection.find({}, { session }).toArray();
-      const snapshot = documents.map(parseDocument);
+      const snapshot = documents.map(parseMongoDocument);
       const byId = new Map(snapshot.map((item) => [item.id, item]));
       const time = nextUpdatedAt(
         changes.flatMap((change) => {
