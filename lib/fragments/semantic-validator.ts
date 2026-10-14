@@ -1,5 +1,6 @@
 import domainsConfig from "@/config/domains.json";
 import { fragmentSchema, type Fragment } from "@/lib/fragment-schema";
+import { validateFragmentJsonSchema } from "@/lib/fragments/json-schema-validator";
 
 export type FragmentValidationIssue = {
   code: string;
@@ -111,7 +112,16 @@ export function assertFragmentSemantics(
   options: ValidateFragmentOptions = {},
 ): Fragment {
   const parsed = fragmentSchema.parse(candidate);
-  const issues = validateFragmentSemantics(parsed, fragments, options);
+  // Both canonical schemas must pass before any backend writes data.
+  const schemaIssues = validateFragmentJsonSchema(parsed).map((issue) => ({
+    code: "json_schema_" + issue.keyword,
+    path: issue.path,
+    message: issue.message,
+  }));
+  const issues = [
+    ...schemaIssues,
+    ...validateFragmentSemantics(parsed, fragments, options),
+  ];
 
   if (issues.length > 0) {
     throw new FragmentDataValidationError(issues);
