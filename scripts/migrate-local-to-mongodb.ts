@@ -46,12 +46,32 @@ async function main() {
   }
   assertFragmentHubDbOrigin(origin);
 
+  // Reproducible imports must use committed source files, never local edits.
+  const dirtyData = execFileSync("git", [
+    "status", "--porcelain", "--", "data/fragments",
+  ], { cwd: process.cwd(), encoding: "utf8" }).trim();
+  if (dirtyData) {
+    throw new Error("Refusing MongoDB import: data/fragments has uncommitted changes.");
+  }
+  const sourceCommit = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+  }).trim();
+
   const source = await listLocalFragments();
   if (source.length === 0) {
     throw new Error("No local fragments found. Check out the correct source branch first.");
   }
 
   const existing = await listMongoFragments();
+  const sourceIds = new Set(source.map((item) => item.id));
+  const unexpected = existing.filter((item) => !sourceIds.has(item.id));
+  if (unexpected.length > 0) {
+    throw new Error(
+      "Refusing MongoDB import: Atlas already contains " + unexpected.length +
+      " Fragment(s) absent from the source repository. Review the target database first.",
+    );
+  }
   const byId = new Map(existing.map((fragment) => [fragment.id, fragment]));
   const pending = [];
 
@@ -68,7 +88,8 @@ async function main() {
   }
 
   const combined = existing.concat(pending);
-  for (const candidate of pending) {
+  // Validate the *entire* final dataset, including existing Atlas records.
+  for (const candidate of combined) {
     assertFragmentSemantics(
       candidate,
       combined.filter((other) => other.id !== candidate.id),
@@ -76,6 +97,7 @@ async function main() {
   }
 
   console.log(
+    "Source commit:", sourceCommit,
     "Source:", source.length,
     "Atlas:", existing.length,
     "Already identical:", source.length - pending.length,
