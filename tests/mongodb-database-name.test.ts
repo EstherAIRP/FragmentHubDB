@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { fragmentHubDbDatabaseName } from "../lib/mongodb/database-name.ts";
+import { fragmentHubDbDatabaseName } from "../lib/mongodb/database-name";
 
 test("default and explicit FragmentHubDB database names are accepted", () => {
   assert.equal(fragmentHubDbDatabaseName(), "fragmenthubdb");
