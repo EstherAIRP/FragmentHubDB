@@ -5,7 +5,7 @@ import { fragmentSchema, type Fragment } from "../lib/fragment-schema";
 import { validateFragmentJsonSchema } from "../lib/fragments/json-schema-validator";
 import { nextFragmentId } from "../lib/fragments/id";
 import { buildFragmentIndex } from "../lib/fragments/index";
-import { validateFragmentSemantics } from "../lib/fragments/semantic-validator";
+import { assertFragmentSemantics, FragmentDataValidationError, validateFragmentSemantics } from "../lib/fragments/semantic-validator";
 
 function fragment(overrides: Partial<Fragment> = {}): Fragment {
   return fragmentSchema.parse({
@@ -136,4 +136,14 @@ test("stored Fragment original input and source metadata cannot be overwritten",
       "Expected immutable " + field + " validation error",
     );
   }
+});
+
+test("canonical write validation rejects extra JSON properties before Zod strips them", () => {
+  const candidate = { ...fragment(), unexpected_field: "not allowed" };
+  assert.throws(
+    () => assertFragmentSemantics(candidate, []),
+    (error: unknown) =>
+      error instanceof FragmentDataValidationError &&
+      error.issues.some((issue) => issue.code === "json_schema_additionalProperties"),
+  );
 });
