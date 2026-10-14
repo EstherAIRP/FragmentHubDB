@@ -36,8 +36,8 @@ FragmentHubDB_MONGODB_DATABASE=fragmenthubdb
 ## 無破壞性匯入與切換
 
 1. **先暫停舊 GitHub 寫入**，以防來源在遷移期間變動。
-2. 在受信任的本機環境下載／更新正確的來源分支，確認 `data/fragments/*.json` 包含完整正式資料。
-3. 先只驗證：
+2. 在受信任的本機環境下載／更新 **`EstherAIRP/FragmentHubDB`** 的正確來源分支，確認 `data/fragments/*.json` 包含完整正式資料。匯入工具會檢查 `git remote origin`，若不指向這個儲存庫就拒絕執行，包括預檢模式。
+3. 先只驗證（命令會載入專案 `.env.local` 的 Atlas 連線設定）：
 
 ~~~bash
 npm install
