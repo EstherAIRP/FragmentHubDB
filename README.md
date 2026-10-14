@@ -1,8 +1,10 @@
 # FragmentHubDB
 
-以 ChatGPT 協助整理工作、生活、學習與靈感碎片的私人管理系統。每筆 Fragment 都保留原始輸入，經使用者確認後保存為 GitHub JSON，再透過 Web 瀏覽與管理。
+以 ChatGPT 協助整理工作、生活、學習與靈感碎片的私人管理系統。每筆 Fragment 都保留原始輸入，經使用者確認後保存為正式 Fragment 文件，再透過 Web 瀏覽與管理。
 
-**ChatGPT 負責 AI 分析，GitHub 保存正式資料，Web 提供管理介面。** Web 不呼叫模型 API，也不需要 `OPENAI_API_KEY`。
+**ChatGPT 負責 AI 分析，Web 提供管理介面，正式資料可切換到 MongoDB Atlas。** Web 不呼叫模型 API，也不需要 `OPENAI_API_KEY`。
+
+> **Atlas 遷移功能已加入但預設未啟用。** 上線前務必先閱讀 [MongoDB Atlas 遷移指南](docs/MONGODB_ATLAS.md)，先核對資料再切換，不可同時向 GitHub 與 Atlas 寫入。
 
 ## 目前功能
 
@@ -46,12 +48,17 @@ npm run dev
 | `FragmentHubDB_ALLOWED_GITHUB_IDS` | 允許登入的不可變數字 GitHub user ID，以逗號分隔 |
 | `FragmentHubDB_GITHUB_TOKEN` | GitHub 資料讀寫憑證；限定目標 Repository，授予 `Contents: Read and write` |
 | `FragmentHubDB_GITHUB_REPOSITORY` | 選填，預設 `EstherAIRP/FragmentHubDB` |
-| `FragmentHubDB_GITHUB_BRANCH` | 選填，預設 `main` |
+| `FragmentHubDB_GITHUB_BRANCH` | GitHub 舊後端使用；預設 `main` |
+| `FragmentHubDB_DATA_STORE` | `mongodb` / `github` / `local`；未設定時保留原本選擇行為 |
+| `FragmentHubDB_MONGODB_URI` | MongoDB Atlas 的伺服器端連線字串；也支援整合產生的 `MONGODB_URI` |
+| `FragmentHubDB_MONGODB_DATABASE` | 資料庫名稱；預設 `fragmenthubdb` |
 
-**資料來源取決於是否設定 `FragmentHubDB_GITHUB_TOKEN`：**
+**資料來源由 `FragmentHubDB_DATA_STORE` 明確指定；未指定時才依原本 GitHub Token 邏輯選擇：**
 
 - 未設定：讀取本機 `data/fragments/`，Web 正式儲存停用。
-- 已設定：讀取 GitHub 即時資料，確認後的 Web 儲存會寫入指定 Repository／Branch，產生 Git commit。開發時請確認目標設定。
+- 已設定 GitHub Token、未指定後端：繼續使用 GitHub Repository／Branch。
+- `FragmentHubDB_DATA_STORE=mongodb`：Web 從 Atlas 讀取，人工確認後寫入 Atlas。Atlas 不可用時不會靜默回退。
+- 切換前使用 `npm run migrate:mongodb` 進行唯讀檢查；核對後明確加 `-- --apply` 才匯入。
 
 OAuth 憑證只負責確認登入身分；OAuth user access token 不持久保存，也不作為資料寫入憑證。詳細規則見[身分驗證規格](docs/AUTHENTICATION.md)。
 
@@ -66,7 +73,7 @@ OAuth 憑證只負責確認登入身分；OAuth user access token 不持久保�
                                             ↓
                               最終 Fragment 預覽 → 最終確認
                                             ↓
-                                     寫入 GitHub JSON
+                                     寫入所選的正式資料來源
 ```
 
 - AI 提出的分類、標籤、優先度、關係與下一步都是提案；人工確認流程產生 `confirmed: true` 前，不得視為定案。
@@ -79,7 +86,7 @@ OAuth 憑證只負責確認登入身分；OAuth user access token 不持久保�
 ### Web 手動管理
 
 ```text
-新增／編輯 → 草稿驗證 → JSON 預覽 → 最終確認 → 已驗證身分的 API → GitHub
+新增／編輯 → 草稿驗證 → JSON 預覽 → 最終確認 → 已驗證身分的 API → MongoDB Atlas 或 GitHub
 ```
 
 看板狀態調整也先保留本機變更，確認後才批次寫入。更新保留樂觀併發控制；資料已在別處更新時回傳 `409`，避免覆蓋新版本。
@@ -87,17 +94,20 @@ OAuth 憑證只負責確認登入身分；OAuth user access token 不持久保�
 ## 架構與資料規則
 
 ```text
-ChatGPT                                 FragmentHubDB Web
-分析／分類／提問／人工確認               瀏覽／搜尋／手動管理／人工確認
-    │                                         │
-    │                              已驗證身分的 API + Server-side Token
-    ▼                                         ▼
-                   GitHub Private Repository
-                   data/fragments/*.json
-                   正式資料 + Git 版本歷史
+ChatGPT                                  FragmentHubDB Web
+分析／分類／提問／人工確認                瀏覽／搜尋／手動管理／人工確認
+     │                                         │
+     │                     已授權的工具／已驗證身分的 Web API
+     └────────────────────────┬────────────────┘
+                              ▼
+                  MongoDB Atlas（切換後）
+                     fragments 集合
+                      正式資料快照
+
+GitHub：程式碼／設定／規則／舊 JSON 遷移來源
 ```
 
-JSON 是唯一正式資料格式，工作與私人內容共用資料池，以 `scope` 等 metadata 分類：
+資料契約仍使用原本的 JSON Schema，Atlas 保存與 JSON 相容的文件。工作與私人內容共用資料池，以 `scope` 中繼資料分類。原始檔案保留在：
 
 ```text
 data/fragments/
@@ -112,7 +122,9 @@ data/fragments/
 - `project`、`related` 必須引用既有 Fragment；`project` 的目標必須為 Project 類型。
 - `original_input` 保留使用者最初文字，不以 AI 摘要覆寫。
 - 優先封存；真正刪除必須由使用者明確要求，且不能留下指向該項目的 Project／Related 關係。
-- `generated/index.json` 是可重建索引，不是正式資料來源。
+- `generated/index.json` 是以舊版檔案建立的可重建索引，不是 Atlas 正式資料來源。
+- MongoDB `_id` 使用現有 Fragment ID（例如 `F-000001`），不更改分類規則或原始輸入。
+- Atlas 不自動提供 Git commit 歷史，若要保留逐筆版本紀錄須另建歷史集合。
 
 **Private Repository 不等於私人網站。** 正式環境必須啟用身分驗證後才能提供私人內容；Fragment 資料、GitHub Token 與其他密鑰不得放入 `public/`。GitHub 存取維持在伺服器端，授權使用不可變的數字 GitHub user ID。
 
@@ -131,7 +143,7 @@ tests/        自動化測試
 docs/         規格、操作契約與部署文件
 ```
 
-技術組合：Next.js、React、TypeScript、Zod、JSON Schema、GitHub API 與 Vercel。
+技術組合：Next.js、React、TypeScript、Zod、JSON Schema、GitHub API、MongoDB Node.js Driver 與 Vercel。
 
 
 ## 文件索引
@@ -139,6 +151,7 @@ docs/         規格、操作契約與部署文件
 | 文件 | 內容 |
 | --- | --- |
 | [資料規格](docs/DATA_SPEC.md) | Fragment 欄位、分類與資料約束 |
+| [MongoDB Atlas 遷移指南](docs/MONGODB_ATLAS.md) | Atlas 設定、先驗證後匯入、切換與安全界線 |
 | [資料層](docs/DATA_LAYER.md) | 本機／GitHub Store、驗證、ID 與併發控制 |
 | [ChatGPT 操作契約](docs/CHATGPT_WORKFLOW.md) | AI 提案、人工確認、提問與最終組裝 |
 | [Web MVP](docs/WEB_MVP.md) | 頁面、看板、搜尋、草稿與狀態操作 |
