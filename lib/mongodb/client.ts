@@ -1,5 +1,6 @@
 import { MongoClient, type Collection } from "mongodb";
 import type { MongoFragmentDocument } from "@/lib/mongodb/document";
+import { fragmentHubDbDatabaseName } from "@/lib/mongodb/database-name";
 
 let cachedClient: Promise<MongoClient> | undefined;
 
@@ -28,7 +29,7 @@ export async function getMongoClient(): Promise<MongoClient> {
 export async function getMongoFragmentCollection(): Promise<Collection<MongoFragmentDocument>> {
   const client = await getMongoClient();
   return client
-    .db(process.env.FragmentHubDB_MONGODB_DATABASE || "fragmenthubdb")
+    .db(fragmentHubDbDatabaseName(process.env.FragmentHubDB_MONGODB_DATABASE))
     .collection<MongoFragmentDocument>("fragments");
 }
 
