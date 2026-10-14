@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { fragmentBackend, isFragmentWriteConfigured } from "../lib/fragments/backend";
+import { assertFragmentHubDbOrigin } from "../lib/fragments/migration-origin";
 
 test("Atlas must be explicitly selected; a token alone preserves legacy GitHub", () => {
   const previous = {
@@ -40,5 +41,26 @@ test("Atlas must be explicitly selected; a token alone preserves legacy GitHub",
       if (value === undefined) delete process.env[name];
       else process.env[name] = value;
     }
+  }
+});
+
+test("MongoDB migration accepts only FragmentHubDB GitHub origins", () => {
+  for (const allowed of [
+    "https://github.com/EstherAIRP/FragmentHubDB",
+    "https://github.com/EstherAIRP/FragmentHubDB.git",
+    "git@github.com:EstherAIRP/FragmentHubDB.git",
+    "ssh://git@github.com/EstherAIRP/FragmentHubDB.git",
+  ]) {
+    assert.doesNotThrow(() => assertFragmentHubDbOrigin(allowed));
+  }
+
+  for (const rejected of [
+    "https://github.com/EstherAIRP/FragmentHub",
+    "https://github.com/EstherAIRP/FragmentHub.git",
+    "https://github.com/SomeoneElse/FragmentHubDB.git",
+    "https://github.com/EstherAIRP/FragmentHubDB.evil",
+    "file:///tmp/FragmentHubDB",
+  ]) {
+    assert.throws(() => assertFragmentHubDbOrigin(rejected), /Refusing MongoDB import/);
   }
 });
