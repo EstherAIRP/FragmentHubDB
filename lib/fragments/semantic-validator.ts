@@ -111,20 +111,22 @@ export function assertFragmentSemantics(
   fragments: readonly Fragment[],
   options: ValidateFragmentOptions = {},
 ): Fragment {
-  const parsed = fragmentSchema.parse(candidate);
-  // Both canonical schemas must pass before any backend writes data.
-  const schemaIssues = validateFragmentJsonSchema(parsed).map((issue) => ({
+  // Validate the input BEFORE Zod parses it. A normal Zod object schema
+  // strips extra keys, so checking JSON Schema on the parsed value would
+  // accidentally accept documents forbidden by additionalProperties: false.
+  const schemaIssues = validateFragmentJsonSchema(candidate).map((issue) => ({
     code: "json_schema_" + issue.keyword,
     path: issue.path,
     message: issue.message,
   }));
-  const issues = [
-    ...schemaIssues,
-    ...validateFragmentSemantics(parsed, fragments, options),
-  ];
+  if (schemaIssues.length > 0) {
+    throw new FragmentDataValidationError(schemaIssues);
+  }
 
-  if (issues.length > 0) {
-    throw new FragmentDataValidationError(issues);
+  const parsed = fragmentSchema.parse(candidate);
+  const semanticIssues = validateFragmentSemantics(parsed, fragments, options);
+  if (semanticIssues.length > 0) {
+    throw new FragmentDataValidationError(semanticIssues);
   }
 
   return parsed;
