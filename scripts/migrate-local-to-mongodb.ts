@@ -13,6 +13,7 @@ import { loadEnvConfig } from "@next/env";
 
 import { listLocalFragments } from "../lib/fragments/local-store";
 import { assertFragmentHubDbOrigin } from "../lib/fragments/migration-origin";
+import { planMongoImport } from "../lib/fragments/migration-plan";
 import {
   assertFragmentSemantics,
 } from "../lib/fragments/semantic-validator";
@@ -59,33 +60,9 @@ async function main() {
   }).trim();
 
   const source = await listLocalFragments();
-  if (source.length === 0) {
-    throw new Error("No local fragments found. Check out the correct source branch first.");
-  }
-
   const existing = await listMongoFragments();
-  const sourceIds = new Set(source.map((item) => item.id));
-  const unexpected = existing.filter((item) => !sourceIds.has(item.id));
-  if (unexpected.length > 0) {
-    throw new Error(
-      "Refusing MongoDB import: Atlas already contains " + unexpected.length +
-      " Fragment(s) absent from the source repository. Review the target database first.",
-    );
-  }
-  const byId = new Map(existing.map((fragment) => [fragment.id, fragment]));
-  const pending = [];
-
-  for (const fragment of source) {
-    const stored = byId.get(fragment.id);
-    if (stored) {
-      if (!isDeepStrictEqual(stored, fragment)) {
-        throw new Error("Migration conflict for " + fragment.id +
-          ": Atlas contains different content. No data was overwritten.");
-      }
-    } else {
-      pending.push(fragment);
-    }
-  }
+  const plan = planMongoImport(source, existing);
+  const pending = plan.pending;
 
   const combined = existing.concat(pending);
   // Validate the *entire* final dataset, including existing Atlas records.
@@ -98,9 +75,9 @@ async function main() {
 
   console.log(
     "Source commit:", sourceCommit,
-    "Source:", source.length,
-    "Atlas:", existing.length,
-    "Already identical:", source.length - pending.length,
+    "Source:", plan.sourceCount,
+    "Atlas:", plan.atlasCount,
+    "Already identical:", plan.identicalCount,
     "To import:", pending.length,
   );
 
@@ -130,7 +107,12 @@ async function main() {
 
 main()
   .catch((error: unknown) => {
-    console.error("Migration failed:", error);
+    // Do not print raw driver exceptions: they may include connection details.
+    if (error instanceof Error && /^(MongoDB import refused:|Refusing MongoDB import:|No local fragments found\.|[A-Za-z0-9_$-]+:)/.test(error.message) && !/mongodb(\+srv)?:\/\//i.test(error.message)) {
+      console.error("Migration failed:", error.message);
+    } else {
+      console.error("Migration failed. Check source validation, Atlas configuration and network access.");
+    }
     process.exitCode = 1;
   })
   .finally(async () => {
