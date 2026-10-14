@@ -1,0 +1,162 @@
+{
+  "version": "0.1",
+  "scope": {
+    "mode": "single",
+    "values": {
+      "work": {
+        "label": "工作",
+        "description": "工作、公司、客戶、職務或工作專案相關內容"
+      },
+      "personal": {
+        "label": "個人",
+        "description": "個人生活、私人專案、創作與自主學習"
+      }
+    },
+    "decision_rule": "When both contexts appear, choose the primary use or responsibility context."
+  },
+  "type": {
+    "mode": "single-primary",
+    "values": {
+      "idea": {
+        "label": "靈感",
+        "description": "尚未形成明確執行範圍的構想或可能性"
+      },
+      "task": {
+        "label": "待辦",
+        "description": "已存在明確、可執行的單一行動"
+      },
+      "learning": {
+        "label": "學習",
+        "description": "核心目的為理解、研究或學會某主題"
+      },
+      "requirement": {
+        "label": "需求",
+        "description": "描述系統、流程或功能應該做到什麼"
+      },
+      "project": {
+        "label": "專案",
+        "description": "有持續時間與明確目標，通常包含多個行動或 Fragment"
+      },
+      "question": {
+        "label": "問題",
+        "description": "核心內容是尚待回答、驗證或釐清的問題"
+      },
+      "decision": {
+        "label": "決策",
+        "description": "保存已做出的選擇、理由與背景"
+      },
+      "tracking": {
+        "label": "追蹤",
+        "description": "主要價值是等待或追蹤外部狀態與後續發展"
+      },
+      "resource": {
+        "label": "資源",
+        "description": "保存可重複使用或查閱的外部資源"
+      },
+      "note": {
+        "label": "紀錄",
+        "description": "不屬於其他類型的一般事實、備忘或紀錄"
+      }
+    },
+    "conflict_rule": "Choose the dominant current intent as the single primary type. Express secondary meaning through domains, tags, project, related, or next_action."
+  },
+  "status": {
+    "mode": "single",
+    "values": {
+      "incubating": {
+        "label": "醞釀中",
+        "description": "想法仍在成形、資訊仍少，暫不排入執行"
+      },
+      "inbox": {
+        "label": "待處理",
+        "description": "已決定要處理，等待開始"
+      },
+      "active": {
+        "label": "進行中",
+        "description": "正在執行、學習或推進"
+      },
+      "waiting": {
+        "label": "卡住",
+        "description": "等待外部回覆、條件、時間或依賴而無法推進"
+      },
+      "done": {
+        "label": "完成",
+        "description": "主要目的已完成"
+      },
+      "archived": {
+        "label": "已封存",
+        "description": "不再主動處理，但保留紀錄"
+      }
+    },
+    "recommended_by_type": {
+      "idea": ["incubating", "inbox", "active", "done", "archived"],
+      "task": ["inbox", "active", "waiting", "done", "archived"],
+      "learning": ["incubating", "inbox", "active", "done", "archived"],
+      "requirement": ["incubating", "inbox", "active", "waiting", "done", "archived"],
+      "project": ["incubating", "inbox", "active", "waiting", "done", "archived"],
+      "question": ["incubating", "inbox", "done", "archived"],
+      "decision": ["incubating", "inbox", "done", "archived"],
+      "tracking": ["active", "waiting", "done", "archived"],
+      "resource": ["inbox", "archived"],
+      "note": ["inbox", "archived"]
+    },
+    "note": "Recommended statuses guide AI suggestions but do not make other schema-valid statuses illegal."
+  },
+  "priority": {
+    "mode": "single",
+    "values": {
+      "high": "對重要目標、成果、依賴、風險或價值有明顯影響",
+      "medium": "有實質價值，但不是核心或關鍵事項",
+      "low": "影響有限，延後通常不造成顯著損失",
+      "none": "純資訊或目前不適合判斷重要度"
+    },
+    "description": "Represents importance, not time pressure."
+  },
+  "urgency": {
+    "mode": "single",
+    "values": {
+      "high": "需要很快處理，延遲可能造成截止、阻塞或損失",
+      "medium": "近期處理較合適，但不是立即性",
+      "low": "時間彈性大",
+      "none": "沒有可辨識的時間壓力"
+    },
+    "description": "Represents time pressure, not importance."
+  },
+  "domains": {
+    "mode": "controlled-multiple",
+    "source": "config/domains.json",
+    "recommended_count": "1-3",
+    "absolute_max": 5,
+    "strategy": "AI may only propose existing domain IDs. New domains require explicit user approval and a config change."
+  },
+  "tags": {
+    "mode": "free-multiple",
+    "format": "unicode-letters-and-numbers-with-internal-hyphens",
+    "normalization": "NFC; trim; lowercase; convert whitespace and underscores to hyphens",
+    "recommended_count": "2-6",
+    "absolute_max": 12,
+    "strategy": "AI proposes reusable fine-grained tags; user confirms them."
+  },
+  "relations": {
+    "project": {
+      "cardinality": "zero-or-one",
+      "target_type": "project",
+      "self_reference": false
+    },
+    "related": {
+      "cardinality": "many",
+      "self_reference": false,
+      "storage_symmetry_required": false,
+      "query_behavior": "Treat inbound references as backlinks instead of forcing two-file writes."
+    }
+  },
+  "decision_policy": {
+    "ai_role": "propose",
+    "human_role": "confirm",
+    "write_requires_confirmation": true,
+    "automatic_reclassification": false,
+    "automatic_merge": false,
+    "automatic_archive": false,
+    "automatic_reprioritization": false
+  }
+}

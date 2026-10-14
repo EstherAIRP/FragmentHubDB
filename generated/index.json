@@ -1,0 +1,20 @@
+[
+  {
+    "id": "F-000001",
+    "title": "1",
+    "scope": "personal",
+    "type": "note",
+    "status": "inbox",
+    "priority": "none",
+    "urgency": "none",
+    "domains": [
+      "ai",
+      "knowledge-management"
+    ],
+    "tags": [],
+    "project": null,
+    "related": [],
+    "backlinks": [],
+    "updated_at": "2026-10-10T05:42:54.393Z"
+  }
+]

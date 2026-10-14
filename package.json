@@ -1,0 +1,40 @@
+{
+  "name": "fragment-hub",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "validate:data": "tsx scripts/validate-data.ts",
+    "build:index": "npm run validate:data && tsx scripts/build-index.ts",
+    "test:data": "tsx --test tests/data-layer.test.ts",
+    "test:web": "tsx --test tests/web-mvp.test.ts",
+    "test": "npm run test:data && npm run test:web && npm run test:auth && npm run test:private-auth && npm run test:status-batch",
+    "prebuild": "npm run build:index",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test:auth": "tsx --test tests/auth-core.test.ts",
+    "test:private-auth": "tsx --test tests/private-route-auth.test.ts",
+    "test:status-batch": "tsx --test tests/status-batch.test.ts"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "6.3.1",
+    "next": "16.3.8",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "server-only": "0.0.1",
+    "zod": "4.6.5",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "7.0.2",
+    "tsx": "^4.20.6"
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "version": "0.1",
+  "rules": {
+    "mode": "controlled-multiple",
+    "recommended_min": 1,
+    "recommended_max": 3,
+    "absolute_max": 5,
+    "id_format": "lowercase-kebab-case",
+    "ai_may_create_new_domain": false,
+    "addition_policy": "Only add a domain when it can sustainably classify multiple fragments. A one-off concept should be a tag."
+  },
+  "domains": {
+    "ai": {
+      "label": "人工智慧",
+      "description": "LLM、生成式 AI、Agent、模型與 AI 應用等廣義人工智慧主題"
+    },
+    "software-development": {
+      "label": "軟體開發",
+      "description": "程式設計、Web、API、架構、部署、開發工具與工程實作"
+    },
+    "computer-vision": {
+      "label": "電腦視覺",
+      "description": "影像辨識、檢測、分類、OCR、影像處理與視覺模型"
+    },
+    "automation-rpa": {
+      "label": "自動化與 RPA",
+      "description": "桌面操作、自動化流程、RPA、畫面操作與工作流自動化"
+    },
+    "knowledge-management": {
+      "label": "知識與資訊管理",
+      "description": "知識庫、資訊整理、記憶系統、資料組織與個人資訊管理"
+    },
+    "ai-rpg": {
+      "label": "AI RPG／角色互動",
+      "description": "AI 角色扮演、長期記憶、角色系統、世界觀與互動式敘事"
+    },
+    "creative": {
+      "label": "創作",
+      "description": "文字、圖像、故事、角色、設計與其他創作活動"
+    },
+    "learning": {
+      "label": "學習與研究",
+      "description": "以學習、研究、理解或能力成長為主要目的的內容"
+    },
+    "life": {
+      "label": "生活",
+      "description": "一般個人生活、日常安排與非工作情境事項"
+    },
+    "productivity": {
+      "label": "生產力與工作方法",
+      "description": "任務管理、工作方法、流程設計、個人管理與效率工具"
+    }
+  }
+}

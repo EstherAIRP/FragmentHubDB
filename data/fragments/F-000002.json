@@ -1,0 +1,36 @@
+{
+  "schema_version": "0.1",
+  "id": "F-000002",
+  "created_at": "2026-10-14T12:50:58.634Z",
+  "updated_at": "2026-10-14T12:50:58.634Z",
+  "scope": "personal",
+  "type": "learning",
+  "status": "inbox",
+  "priority": "medium",
+  "urgency": "none",
+  "domains": [
+    "software-development",
+    "learning"
+  ],
+  "tags": [
+    "mongodb",
+    "atlas",
+    "nosql",
+    "cloud-database"
+  ],
+  "project": null,
+  "related": [],
+  "title": "研究 MongoDB Atlas",
+  "summary": "了解 MongoDB Atlas 的核心功能、技術特性、操作方式及應用情境，評估是否適合實際專案使用。",
+  "next_action": null,
+  "original_input": "研究MongoDB Atlas",
+  "notes": "建議研究範圍（尚未完成研究）：\n1. 服務概覽：MongoDB Atlas 的定位、核心功能與適用情境。\n2. 部署與操作：建立資料庫叢集、連線設定與基本資料操作。\n3. 成本與方案：免費及付費方案、計價模式與成本考量。\n4. 效能與安全性：索引、擴展性、備份、權限及網路存取。\n5. 系統整合：與後端服務及應用程式的整合方式。\n6. 適用性評估：使用優缺點、限制及其他資料庫方案的比較。\n\n預期成果：形成 MongoDB Atlas 的基礎認識，整理功能、成本、技術限制及適用場景，作為後續技術選型參考。\n\n具體應用情境與研究期限尚未提供。分類已確認，使用者選擇不進行補充訪談（0 題）。以上方向屬建議，不代表研究結論。",
+  "interview": [],
+  "source": {
+    "channel": "chatgpt"
+  },
+  "ai": {
+    "classification_confirmed": true,
+    "interview_used": false
+  }
+}

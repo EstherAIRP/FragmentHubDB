@@ -1,0 +1,193 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fragmenthub.local/schema/fragment.schema.json",
+  "title": "FragmentHub Canonical Fragment",
+  "description": "Canonical Fragment format for FragmentHub schema version 0.1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "created_at",
+    "updated_at",
+    "scope",
+    "type",
+    "status",
+    "priority",
+    "urgency",
+    "domains",
+    "tags",
+    "project",
+    "related",
+    "title",
+    "summary",
+    "next_action",
+    "original_input",
+    "notes",
+    "interview",
+    "source",
+    "ai"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^F-[0-9]{6}$"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "scope": {
+      "enum": ["work", "personal"]
+    },
+    "type": {
+      "enum": [
+        "idea",
+        "task",
+        "learning",
+        "requirement",
+        "project",
+        "question",
+        "decision",
+        "tracking",
+        "resource",
+        "note"
+      ]
+    },
+    "status": {
+      "enum": [
+        "incubating",
+        "inbox",
+        "active",
+        "waiting",
+        "done",
+        "archived"
+      ]
+    },
+    "priority": {
+      "enum": ["high", "medium", "low", "none"]
+    },
+    "urgency": {
+      "enum": ["high", "medium", "low", "none"]
+    },
+    "domains": {
+      "type": "array",
+      "maxItems": 5,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+      }
+    },
+    "tags": {
+      "type": "array",
+      "maxItems": 12,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[\\p{L}\\p{N}]+(?:-[\\p{L}\\p{N}]+)*$"
+      }
+    },
+    "project": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^F-[0-9]{6}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "related": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^F-[0-9]{6}$"
+      }
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "next_action": {
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 2000
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "original_input": {
+      "type": "string",
+      "minLength": 1
+    },
+    "notes": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "interview": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["question", "answer"],
+        "properties": {
+          "question": {
+            "type": "string",
+            "minLength": 1
+          },
+          "answer": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["channel"],
+      "properties": {
+        "channel": {
+          "enum": ["chatgpt", "web"]
+        }
+      }
+    },
+    "ai": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["classification_confirmed", "interview_used"],
+      "properties": {
+        "classification_confirmed": {
+          "const": true
+        },
+        "interview_used": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

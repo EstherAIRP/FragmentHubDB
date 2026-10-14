@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.1",
+  "id": "F-000000",
+  "created_at": "2026-10-02T16:00:00+08:00",
+  "updated_at": "2026-10-02T16:00:00+08:00",
+  "scope": "personal",
+  "type": "idea",
+  "status": "incubating",
+  "priority": "medium",
+  "urgency": "low",
+  "domains": [
+    "knowledge-management",
+    "software-development"
+  ],
+  "tags": [
+    "fragment-management",
+    "gpt",
+    "github"
+  ],
+  "project": null,
+  "related": [],
+  "title": "Fragment 範例",
+  "summary": "此檔僅示範 Fragment v0.1 的正式 JSON 結構，不屬於實際資料。",
+  "next_action": null,
+  "original_input": "這是一筆範例原始輸入。",
+  "notes": null,
+  "interview": [],
+  "source": {
+    "channel": "chatgpt"
+  },
+  "ai": {
+    "classification_confirmed": true,
+    "interview_used": false
+  }
+}
