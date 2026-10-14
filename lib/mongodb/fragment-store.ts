@@ -1,4 +1,4 @@
-import { MongoServerError } from "mongodb";
+import { MongoError, MongoServerError } from "mongodb";
 
 import { fragmentSchema, type Fragment } from "@/lib/fragment-schema";
 import { nextFragmentId } from "@/lib/fragments/id";
@@ -217,7 +217,7 @@ export async function applyMongoStatusBatch(
   } catch (error) {
     if (
       error instanceof MongoFragmentConflictError ||
-      (error instanceof MongoServerError &&
+      (error instanceof MongoError &&
         error.hasErrorLabel("TransientTransactionError"))
     ) {
       return { kind: "conflict", conflicts: [], reason: "branch_moved" };
