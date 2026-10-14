@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { planMongoImport } from "../lib/fragments/migration-plan.ts";
+import { planMongoImport } from "../lib/fragments/migration-plan";
 import type { Fragment } from "../lib/fragment-schema";
 
 function fragment(id: string, overrides: Partial<Fragment> = {}): Fragment {
