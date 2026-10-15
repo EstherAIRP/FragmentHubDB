@@ -5,6 +5,7 @@ import type { Fragment } from "../lib/fragment-schema";
 import type { NewFragment } from "../lib/fragments/local-store";
 import { FragmentDataValidationError } from "../lib/fragments/semantic-validator";
 import { closeMongoClient, getMongoClient } from "../lib/mongodb/client";
+import { BACKUP_DATABASE, captureBackupSnapshot, encodeBackupSnapshot, decodeBackupSnapshot } from "../lib/mongodb/backup-snapshot";
 import { withMongoFragmentWrite } from "../lib/mongodb/write-transaction";
 import { chatGptDraftSchema } from "../lib/chatgpt/proposal-schema";
 import { createChatGptProposal, getChatGptProposal, approveChatGptProposal, ProposalNotReadyError } from "../lib/chatgpt/proposals";
@@ -301,4 +302,44 @@ test("expired ChatGPT proposals never create a canonical Fragment", async () => 
   );
   await assert.rejects(approveChatGptProposal(proposal._id, "12345"));
   assert.deepEqual(await listMongoFragments(), []);
+});
+
+test("snapshot backup reads consistent fragments, metadata and proposals with no database mutation", async () => {
+  // This test's suite-wide guard permits ONLY the disposable CI MongoDB.
+  const client = await getMongoClient();
+  const db = client.db(BACKUP_DATABASE);
+  await db.dropDatabase();
+  const now = new Date("2026-10-15T12:00:00.000Z");
+  const input = draft();
+  const id = "F-000001";
+  try {
+    await db.collection("fragments").insertOne({
+      ...input, _id: id, id, created_at: now.toISOString(), updated_at: now.toISOString(),
+    });
+    await db.collection("metadata").insertOne({
+      _id: "fragments", version: 1, highest_allocated: 1,
+    });
+    await db.collection("chatgpt_proposals").insertOne({
+      _id: "a".repeat(48),
+      owner_id: "123456",
+      status: "pending",
+      draft: proposalDraft(),
+      created_at: now,
+      expires_at: new Date(now.getTime() + 30000),
+    });
+    const snapshot = await captureBackupSnapshot(client, BACKUP_DATABASE);
+    const { snapshot: restored, counts } = decodeBackupSnapshot(encodeBackupSnapshot(snapshot));
+    assert.deepEqual(counts, { fragments: 1, metadata: 1, chatgpt_proposals: 1 });
+    assert.equal(restored.collections.fragments[0].original_input, input.original_input);
+    assert.equal(restored.collections.metadata[0].highest_allocated, 1);
+    assert.ok(restored.collections.chatgpt_proposals[0].created_at instanceof Date);
+    assert.equal(await db.collection("fragments").countDocuments({}), 1);
+    assert.equal(await db.collection("metadata").countDocuments({}), 1);
+    assert.equal(await db.collection("chatgpt_proposals").countDocuments({}), 1);
+
+    await db.collection("unexpected_future_collection").insertOne({ value: 1 });
+    await assert.rejects(() => captureBackupSnapshot(client, BACKUP_DATABASE), /BACKUP_UNKNOWN_COLLECTION/);
+  } finally {
+    await db.dropDatabase();
+  }
 });

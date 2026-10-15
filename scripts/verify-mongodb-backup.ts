@@ -6,7 +6,7 @@
  */
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { BACKUP_MAX_BYTES, decodeBackupSnapshot } from "../lib/mongodb/backup-snapshot";
 
@@ -45,6 +45,10 @@ async function main(): Promise<void> {
   const identity = arg("--identity=");
   if (!path.isAbsolute(archive) || !path.isAbsolute(identity) ||
     !archive.endsWith(".age")) throw new Error("BACKUP_VERIFY_ARGUMENTS");
+  const [archiveInfo, manifestInfo] = await Promise.all([stat(archive), stat(archive + ".json")]);
+  if (archiveInfo.size > BACKUP_MAX_BYTES + 64 * 1024 || manifestInfo.size > 8 * 1024) {
+    throw new Error("BACKUP_SIZE_LIMIT");
+  }
   const [encrypted, metadata] = await Promise.all([
     readFile(archive), readFile(archive + ".json", "utf8"),
   ]);

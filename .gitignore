@@ -7,3 +7,11 @@ out/
 .env.local
 .env.*.local
 .DS_Store
+
+# Local private backup artifacts (never commit to a public repository)
+*.age
+*.age.json
+backup-status.json
+.backups/
+backups/
+backup-identity.txt
