@@ -16,6 +16,7 @@ Web 使用官方 MongoDB Node.js Driver；Atlas 舊版 App Services Data API 已
 - Fragment 欄位維持原本 JSON/Zod Schema，不改寫 `original_input`。
 - MongoDB `_id` 直接使用 `F-000001` 格式；不改採 ObjectId。
 - 新增依唯一 `_id` 避免競爭碰撞；更新使用 `expected_updated_at` 原子條件檢查。
+- `metadata` 交易同步文件另維護 `highest_allocated`；已刪除的最大 Fragment 編號仍不會再次發給新資料。
 - 看板批次狀態更新以 MongoDB Transaction 一次提交或一次取消。
 - MongoDB 快照**不等於 Git 歷史**；逐筆版本紀錄須另外設計 audit/history 集合。
 
@@ -39,7 +40,7 @@ MongoDB 儲存採用以下兩個集合：
 npm run test:mongodb:integration
 ```
 
-測試使用固定的本機連線 `127.0.0.1:27017` 與隔離資料庫 `fragmenthubdb_ci`，並強制要求 `CI=true`。不符合條件會直接中止。測試會清除**測試資料庫**，故絕不可使用正式 Atlas URI。測試情境包含 CRUD、原始輸入不可覆寫、失效引用拒絕刪除、陳舊版本拒絕覆寫、看板批次原子性與並行更新。
+測試使用固定的本機連線 `127.0.0.1:27017` 與隔離資料庫 `fragmenthubdb_ci`，並強制要求 `CI=true`。不符合條件會直接中止。測試會清除**測試資料庫**，故絕不可使用正式 Atlas URI。測試情境包含 CRUD、原始輸入不可覆寫、ID 刪除後不重用、失效引用拒絕刪除、陳舊版本拒絕覆寫、看板批次原子性與並行更新。
 
 這是 MongoDB 真實交易的自動化驗證，但**不等同於已測試使用者正式 Atlas 叢集**，上線前仍須執行 Atlas 專屬網路、權限、連線及遷移預檢。
 
