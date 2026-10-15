@@ -5,6 +5,7 @@ import type { Fragment } from "../lib/fragment-schema";
 import type { NewFragment } from "../lib/fragments/local-store";
 import { FragmentDataValidationError } from "../lib/fragments/semantic-validator";
 import { closeMongoClient, getMongoClient } from "../lib/mongodb/client";
+import { withMongoFragmentWrite } from "../lib/mongodb/write-transaction";
 import {
   applyMongoStatusBatch,
   createMongoFragment,
@@ -84,6 +85,32 @@ test("create, list and get persist confirmed Fragment fields", async () => {
     _id: "fragments",
   });
   assert.equal(typeof metadata?.version, "number");
+});
+
+test("transaction error rolls back Fragment and metadata changes together", async () => {
+  const now = new Date().toISOString();
+  await assert.rejects(
+    async () => withMongoFragmentWrite(async (collection, session, metadata) => {
+      await collection.insertOne({
+        ...draft(),
+        id: "F-000001",
+        _id: "F-000001",
+        created_at: now,
+        updated_at: now,
+      }, { session });
+      await metadata.updateOne(
+        { _id: "fragments" },
+        { $max: { highest_allocated: 999 } },
+        { session },
+      );
+      throw new Error("intentional integration-test rollback");
+    }),
+    /intentional integration-test rollback/,
+  );
+  const client = await getMongoClient();
+  const database = client.db(TEST_DB);
+  assert.equal(await database.collection("fragments").countDocuments(), 0);
+  assert.equal(await database.collection("metadata").countDocuments(), 0);
 });
 
 test("deleted Fragment IDs are never reused", async () => {
