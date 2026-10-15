@@ -4,7 +4,7 @@ import path from "node:path";
 import test from "node:test";
 
 import { chatGptIntegrationConfig, isAuthorizedChatGptRequest, isSameOriginApproval } from "../lib/chatgpt/auth";
-import { chatGptProposalRequestSchema, PROPOSAL_TTL_MS } from "../lib/chatgpt/proposal-schema";
+import { chatGptProposalRequestSchema, toChatGptFragmentInput, PROPOSAL_TTL_MS } from "../lib/chatgpt/proposal-schema";
 
 const fixture = {
   scope: "personal",
@@ -83,6 +83,12 @@ test("ChatGPT proposals preserve user input and reject forged extra fields", () 
   assert.equal(chatGptProposalRequestSchema.safeParse({
     draft: fixture, approved: true,
   }).success, false);
+  const input = "  Preserve leading and trailing spaces  ";
+  const result = chatGptProposalRequestSchema.parse({
+    draft: { ...fixture, original_input: input },
+  });
+  assert.equal(result.draft.original_input, input);
+  assert.equal(toChatGptFragmentInput(result.draft).original_input, input);
   assert.equal(PROPOSAL_TTL_MS, 30 * 60 * 1000);
 });
 
