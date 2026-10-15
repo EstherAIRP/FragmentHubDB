@@ -31,7 +31,7 @@ export async function POST(
   try {
     const fragmentId = await approveChatGptProposal(id, session.id);
     return NextResponse.redirect(
-      new URL(`/fragments/${fragmentId}`, request.url),
+      new URL(`/fragments/${fragmentId}`, process.env.FragmentHubDB_PUBLIC_URL),
       { status: 303 },
     );
   } catch (error) {
