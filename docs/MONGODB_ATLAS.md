@@ -113,6 +113,7 @@ FragmentHubDB_DATA_STORE=mongodb
 
 - `fragment-hub` Vercel 專案連接的是另一個 GitHub 儲存庫，不可用於 FragmentHubDB 的部署或資料庫測試。
 - FragmentHubDB 的 Atlas URI 與正式網站專案必須獨立設定，不能借用其他專案環境變數。
+- 舊 GitHub 資料後端僅允許 `FragmentHubDB_GITHUB_REPOSITORY=EstherAIRP/FragmentHubDB`；即使誤設為 `EstherAIRP/FragmentHub` 也會拒絕執行，不能跨專案寫入。
 - 隔離 MongoDB 8 的整合測試、資料搬遷演練與完整建置已透過 CI 驗證；**Atlas 專用環境的連線、網路、權限與正式資料遷移仍未驗收**，PR 必須維持草稿。
 
 ### MongoDB 資料庫命名護欄
