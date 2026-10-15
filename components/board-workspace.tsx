@@ -392,7 +392,7 @@ export function BoardWorkspace({
               disabled={!remoteConfigured || refreshing}
               title={
                 !remoteConfigured
-                  ? "GitHub Remote Store 尚未設定"
+                  ? "目前選擇的資料儲存服務尚未設定"
                   : refreshing
                     ? "正在載入最新資料…"
                     : undefined
