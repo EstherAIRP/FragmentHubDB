@@ -86,6 +86,20 @@ test("create, list and get persist confirmed Fragment fields", async () => {
   assert.equal(typeof metadata?.version, "number");
 });
 
+test("deleted Fragment IDs are never reused", async () => {
+  const first = await createMongoFragment(draft({ title: "First" }));
+  const second = await createMongoFragment(draft({ title: "Second" }));
+  await deleteMongoFragment(second.id, second.updated_at);
+  const third = await createMongoFragment(draft({ title: "Third" }));
+  assert.equal(first.id, "F-000001");
+  assert.equal(second.id, "F-000002");
+  assert.equal(third.id, "F-000003");
+  await deleteMongoFragment(first.id, first.updated_at);
+  await deleteMongoFragment(third.id, third.updated_at);
+  const fourth = await createMongoFragment(draft({ title: "Fourth" }));
+  assert.equal(fourth.id, "F-000004");
+});
+
 test("update enforces optimistic version and immutable original input", async () => {
   const initial = await createMongoFragment(draft());
   const updated = await replaceMongoFragment(
