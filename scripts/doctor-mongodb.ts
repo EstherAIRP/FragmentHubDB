@@ -10,6 +10,7 @@ import { loadEnvConfig } from "@next/env";
 
 import { assertFragmentHubDbOrigin } from "../lib/fragments/migration-origin";
 import { fragmentHubDbDatabaseName } from "../lib/mongodb/database-name";
+import { diagnoseMongoDoctorError } from "../lib/mongodb/doctor-diagnostics";
 import { validateMongoMetadata, type MongoMetadata } from "../lib/mongodb/metadata-health";
 import { validateFragmentSemantics } from "../lib/fragments/semantic-validator";
 import { closeMongoClient, getMongoClient } from "../lib/mongodb/client";
@@ -75,12 +76,10 @@ async function main(): Promise<void> {
 
 main()
   .catch((error: unknown) => {
-    // Do not print connection strings, driver error bodies or credentials.
-    if (error instanceof Error && /transactions are unavailable|invalid Fragment|Refusing MongoDB import|transaction metadata is not ready|supports only --strict/.test(error.message)) {
-      console.error("Atlas check failed:", error.message);
-    } else {
-      console.error("Atlas connection or readiness check failed; verify credentials, topology and network access.");
-    }
+    // Never echo raw MongoDB driver errors or git output: these can expose
+    // connection strings, credentials, hosts or internal deployment details.
+    const diagnosis = diagnoseMongoDoctorError(error);
+    console.error(`Atlas doctor [${diagnosis.code}]: ${diagnosis.guidance}`);
     process.exitCode = 1;
   })
   .finally(async () => {
