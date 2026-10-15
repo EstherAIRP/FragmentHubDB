@@ -5,7 +5,7 @@ import { FragmentForm } from "@/components/fragment-form";
 import { requireSession } from "@/lib/auth";
 import { listFragments } from "@/lib/fragments";
 import { collectTags } from "@/lib/fragments/query";
-import { isGitHubRemoteConfigured } from "@/lib/github/availability";
+import { isFragmentWriteConfigured } from "@/lib/fragments/backend";
 import type { ManualFragmentDraft } from "@/lib/fragments/manual-draft";
 
 type EditFragmentPageProps = {
@@ -83,7 +83,7 @@ export default async function EditFragmentPage({
         domains={domains}
         fragments={options}
         tagSuggestions={collectTags(fragments)}
-        remoteConfigured={isGitHubRemoteConfigured()}
+        remoteConfigured={isFragmentWriteConfigured()}
         existingMeta={{
           id: fragment.id,
           created_at: fragment.created_at,
