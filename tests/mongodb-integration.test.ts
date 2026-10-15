@@ -80,7 +80,7 @@ test("create, list and get persist confirmed Fragment fields", async () => {
   assert.deepEqual(await listMongoFragments(), [created]);
 
   const client = await getMongoClient();
-  const metadata = await client.db(TEST_DB).collection("metadata").findOne({
+  const metadata = await client.db(TEST_DB).collection<{ _id: string; version: number }>("metadata").findOne({
     _id: "fragments",
   });
   assert.equal(typeof metadata?.version, "number");
