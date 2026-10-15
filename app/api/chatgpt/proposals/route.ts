@@ -5,6 +5,7 @@ import { chatGptProposalRequestSchema } from "@/lib/chatgpt/proposal-schema";
 import { createChatGptProposal } from "@/lib/chatgpt/proposals";
 import { fragmentBackend, isFragmentWriteConfigured } from "@/lib/fragments/backend";
 import { FragmentDataValidationError } from "@/lib/fragments/semantic-validator";
+import { readLimitedJson } from "@/lib/fragments/status-batch";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,18 +19,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "MongoDB data store is not ready." }, { status: 503 });
   }
 
-  // Strict cap to prevent oversized untrusted proposals.
-  let value: unknown;
-  try {
-    const body = await request.text();
-    if (Buffer.byteLength(body, "utf8") > 64 * 1024) {
-      return NextResponse.json({ error: "Proposal too large." }, { status: 413 });
-    }
-    value = JSON.parse(body);
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON." }, { status: 400 });
+  // Bound the incoming stream while reading, before allocating the payload.
+  const body = await readLimitedJson(request, 64 * 1024);
+  if (!body.ok) {
+    return NextResponse.json(
+      { error: body.error },
+      { status: body.error.includes("too large") ? 413 : 400 },
+    );
   }
-  const parsed = chatGptProposalRequestSchema.safeParse(value);
+  const parsed = chatGptProposalRequestSchema.safeParse(body.value);
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Proposal schema invalid.", details: parsed.error.flatten() },
