@@ -24,7 +24,7 @@
 | `FragmentHubDB_SESSION_SECRET` | 獨立產生的至少 32 位元組亂數；**只存 Vercel Sensitive env** |
 | `FragmentHubDB_ALLOWED_GITHUB_IDS` | 已授權 GitHub 登入者的**數字** ID |
 | `FragmentHubDB_CHATGPT_OWNER_GITHUB_ID` | 指定可核准 ChatGPT 提案的 GitHub 數字 ID |
-| `FragmentHubDB_MONGODB_URI` | **待使用者在 Vercel Sensitive env 私下填入**，只連到 FragmentHubDB 專用測試 Atlas |
+| `FragmentHubDB_MONGODB_URI` | 已在 Vercel Preview 分支設定為 Sensitive；**尚未驗證雲端 Atlas 連線** |
 | `FragmentHubDB_GITHUB_CLIENT_ID` | 已於測試分支 Preview 設定；只記錄名稱，不記錄值 |
 | `FragmentHubDB_GITHUB_CLIENT_SECRET` | 已於測試分支 Preview 的 Sensitive env 設定；更新後須重新部署 |
 | `FragmentHubDB_CHATGPT_API_TOKEN` | **待工具連線階段設定**：獨立 Bearer token；未設定時 ChatGPT API 維持停用 |
@@ -43,7 +43,7 @@ https://fragment-hub-db-git-feature-mongodb-cd5c25-esther1oos-projects.vercel.ap
 2. Atlas Network Access 的本機 IP 白名單**不**等於允許 Vercel 的雲端出口 IP。請先評估專用固定出口／網路政策再決定允許來源，不要在未告知風險前直接開放 `0.0.0.0/0`。
 3. Vercel 的預覽網址可能啟用 Vercel Authentication（部署保護），這對未登入的 API 工具與 GitHub OAuth callback 測試有影響；**不要為了方便就直接關閉私人資料的保護**。若須允許外部工具呼叫，另規劃身分驗證、安全入口或專用測試網域。
 4. 禁止複製其他系統的 GitHub OAuth secret、Session secret、MongoDB URI。所有敏感變數不得提交 Git、放在 `NEXT_PUBLIC_` 或貼到聊天。
-5. `FragmentHubDB_DATA_STORE=mongodb` 代表測試站不會默默回退到 GitHub；在 `FragmentHubDB_MONGODB_URI` 未設定前，正式讀寫 API 不會連上 Atlas，屬預期的「尚未完成設定」狀態。
+5. `FragmentHubDB_DATA_STORE=mongodb` 代表測試站不會默默回退到 GitHub。已新增測試分支專用 `FragmentHubDB_MONGODB_URI`，但雲端出站 IP 是否獲 Atlas Network Access 授權仍須現場驗證；連線失敗時不可回退到其他資料來源。
 6. 正式 Fragment 仍為零筆；此 Preview 上線不代表可以遷移或匯入真實資料。
 7. 設定或修改 Vercel 環境變數後，必須產生**新部署**才會生效；同 Commit 重新部署可能被 `vercel.json` 的 ignore-build 規則略過。
 
@@ -90,3 +90,12 @@ The client_id and/or client_secret passed are incorrect.
 在排查 GitHub 授權端點 404 時，確認 `FragmentHubDB_GITHUB_CLIENT_ID` 的 Vercel Preview 環境變數於**前一次成功的 Preview 部署之後再次更新**。Vercel 後續因環境變數更新觸發的 `main` 部署被 ignored-build 規則取消，並沒有讓新值套用到 **`feature/mongodb-atlas-store`** 的已部署伺服器。
 
 處理方式：只更新本測試分支文件，觸發新的 Preview 建置；然後以 Vercel 的部署 ID、Git Commit 與 Ready 狀態，確認其建立時間晚於 Client ID 和 Secret 的更新時間。尚未完成新部署前，不應推論 GitHub 404 是新版憑證或授權參數的問題。正式 `main`、既有資料與其他 Vercel 專案不變。
+
+
+## Atlas URI Preview 範圍修正及雲端連線驗證（2026-10-15）
+
+- 使用者已在 Vercel 設定 FragmentHubDB 專用 `FragmentHubDB_MONGODB_URI`；首次建立時被放到 **Production** 而非預期的 Preview。
+- 環境變數已修改為 **Target: Preview，Git Branch: `feature/mongodb-atlas-store`**，儲存類型維持 Sensitive。它不再屬於 Production。
+- 此分支的 `FragmentHubDB_DATA_STORE=mongodb`、`FragmentHubDB_MONGODB_DATABASE=fragmenthubdb_test` 保持不變；環境憑證更新後須新建 Preview 部署，才能讓 Next.js 伺服器載入。
+- 本機 doctor 成功不等於 Vercel 伺服器成功連線 Atlas。預覽站若在登入後載入看板仍報錯，優先確認 MongoDB `ServerSelectionError`、Atlas IP Access List、Vercel 出口網路與 TLS，而不是重設 GitHub OAuth 憑證。
+- 正式資料移轉、ChatGPT 提案核准實測、Production 啟用均待個別人工確認。不把連線密碼、完整 MongoDB URI 或任何金鑰記錄在此文件。
