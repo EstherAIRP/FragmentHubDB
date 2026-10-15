@@ -161,12 +161,13 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [proposal_id, status, expires_at, review_path]
+                required: [proposal_id, status, expires_at, review_path, review_url]
                 properties:
                   proposal_id: { type: string }
                   status: { type: string, const: pending }
                   expires_at: { type: string, format: date-time }
                   review_path: { type: string }
+                  review_url: { type: string, format: uri }
                   message: { type: string }
         "400": { description: Invalid JSON/schema }
         "401": { description: Bearer auth failed }
