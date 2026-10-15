@@ -238,7 +238,7 @@ test("concurrent child creation and project deletion never leave orphan referenc
 
 test("ChatGPT preview stores only a pending proposal; human approval creates once", async () => {
   const prepared = chatGptDraftSchema.parse({
-    ...draft({ title: "Previewed by ChatGPT" }),
+    ...draft({ title: "Previewed by ChatGPT", original_input: "  Original input with whitespace  \\n" }),
     source: { channel: "chatgpt" },
   });
   const proposal = await createChatGptProposal(prepared, "12345");
