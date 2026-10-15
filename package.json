@@ -10,7 +10,7 @@
     "validate:data": "tsx scripts/validate-data.ts",
     "build:index": "npm run validate:data && tsx scripts/build-index.ts",
     "test:data": "tsx --test tests/data-layer.test.ts",
-    "test:web": "tsx --test tests/web-mvp.test.ts",
+    "test:web": "tsx --test tests/web-mvp.test.ts tests/storage-ui.test.ts",
     "test": "npm run test:data && npm run test:web && npm run test:auth && npm run test:private-auth && npm run test:status-batch && npm run test:backend",
     "prebuild": "npm run build:index",
     "build": "next build",
