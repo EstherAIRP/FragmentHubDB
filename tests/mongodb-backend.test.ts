@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { fragmentBackend, isFragmentWriteConfigured } from "../lib/fragments/backend";
 import { assertFragmentHubDbOrigin } from "../lib/fragments/migration-origin";
+import { fragmentHubDbGitHubRepository } from "../lib/fragments/repository-identity";
 
 test("Atlas must be explicitly selected; a token alone preserves legacy GitHub", () => {
   const previous = {
@@ -64,5 +65,28 @@ test("MongoDB migration accepts only FragmentHubDB GitHub origins", () => {
     "file:///tmp/FragmentHubDB",
   ]) {
     assert.throws(() => assertFragmentHubDbOrigin(rejected), /Refusing MongoDB import/);
+  }
+});
+
+test("GitHub Fragment data store cannot accidentally target unrelated repositories", () => {
+  assert.deepEqual(fragmentHubDbGitHubRepository(), {
+    owner: "EstherAIRP",
+    repo: "FragmentHubDB",
+  });
+  assert.deepEqual(
+    fragmentHubDbGitHubRepository("EstherAIRP/FragmentHubDB"),
+    { owner: "EstherAIRP", repo: "FragmentHubDB" },
+  );
+  for (const unexpected of [
+    "EstherAIRP/FragmentHub",
+    "EstherAIRP/FragmentHubDB/other",
+    "SomeOtherOwner/FragmentHubDB",
+    "EstherAIRP/fragmenthubdb",
+    "",
+  ]) {
+    assert.throws(
+      () => fragmentHubDbGitHubRepository(unexpected),
+      /Refusing GitHub Fragment storage access/,
+    );
   }
 });
