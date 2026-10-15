@@ -4,6 +4,7 @@ import { getMongoClient } from "@/lib/mongodb/client";
 import { fragmentHubDbDatabaseName } from "@/lib/mongodb/database-name";
 import {
   chatGptDraftSchema,
+  toChatGptFragmentInput,
   PROPOSAL_TTL_MS,
   type ChatGptDraft,
   type ChatGptProposal,
@@ -11,7 +12,6 @@ import {
 import { listMongoFragments } from "@/lib/mongodb/fragment-store";
 import { nextFragmentId } from "@/lib/fragments/id";
 import { assertFragmentSemantics } from "@/lib/fragments/semantic-validator";
-import { toFragmentWriteInput } from "@/lib/fragments/manual-draft";
 import { withMongoFragmentWrite } from "@/lib/mongodb/write-transaction";
 import { insertMongoFragmentInTransaction } from "@/lib/mongodb/fragment-store";
 
@@ -39,7 +39,7 @@ export async function createChatGptProposal(
   const draft = chatGptDraftSchema.parse(draftInput);
   const current = await listMongoFragments();
   const now = new Date();
-  const input = toFragmentWriteInput(draft);
+  const input = toChatGptFragmentInput(draft);
   // Preliminary relationship checks; the canonical write revalidates under
   // the transaction lock to handle changes occurring after preview.
   assertFragmentSemantics({
@@ -99,7 +99,7 @@ export async function approveChatGptProposal(
     }
 
     const created = await insertMongoFragmentInTransaction(
-      toFragmentWriteInput(proposal.draft),
+      toChatGptFragmentInput(proposal.draft),
       fragments,
       session,
       epoch,
