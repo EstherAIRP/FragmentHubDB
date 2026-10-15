@@ -72,6 +72,23 @@ jobs:
           FragmentHubDB_MONGODB_DATABASE: fragmenthubdb_ci
         run: npm run test:mongodb:integration
 
+      - name: Rehearse JSON migration in the disposable MongoDB database
+        env:
+          CI: "true"
+          FragmentHubDB_DATA_STORE: mongodb
+          FragmentHubDB_MONGODB_URI: "mongodb://127.0.0.1:27017/?replicaSet=rs0&directConnection=true"
+          FragmentHubDB_MONGODB_DATABASE: fragmenthubdb_ci
+        run: |
+          set -euo pipefail
+          # The container and its test-only database are created in this job.
+          docker exec fragmenthubdb-ci-mongo mongosh --quiet \
+            --eval 'db.getSiblingDB("fragmenthubdb_ci").dropDatabase()'
+          npm run doctor:mongodb
+          npm run migrate:mongodb
+          npm run migrate:mongodb -- --apply
+          npm run migrate:mongodb
+          npx tsx --test tests/mongodb-migration-rehearsal.test.ts
+
       - name: Stop isolated MongoDB
         if: always()
         run: docker rm -f fragmenthubdb-ci-mongo 2>/dev/null || true
