@@ -313,13 +313,13 @@ test("snapshot backup reads consistent fragments, metadata and proposals with no
   const input = draft();
   const id = "F-000001";
   try {
-    await db.collection("fragments").insertOne({
+    await db.collection<{ _id: string; [key: string]: unknown }>("fragments").insertOne({
       ...input, _id: id, id, created_at: now.toISOString(), updated_at: now.toISOString(),
     });
-    await db.collection("metadata").insertOne({
+    await db.collection<{ _id: string; [key: string]: unknown }>("metadata").insertOne({
       _id: "fragments", version: 1, highest_allocated: 1,
     });
-    await db.collection("chatgpt_proposals").insertOne({
+    await db.collection<{ _id: string; [key: string]: unknown }>("chatgpt_proposals").insertOne({
       _id: "a".repeat(48),
       owner_id: "123456",
       status: "pending",
