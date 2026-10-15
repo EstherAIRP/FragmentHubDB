@@ -6,6 +6,8 @@ import type { NewFragment } from "../lib/fragments/local-store";
 import { FragmentDataValidationError } from "../lib/fragments/semantic-validator";
 import { closeMongoClient, getMongoClient } from "../lib/mongodb/client";
 import { withMongoFragmentWrite } from "../lib/mongodb/write-transaction";
+import { chatGptDraftSchema } from "../lib/chatgpt/proposal-schema";
+import { createChatGptProposal, getChatGptProposal, approveChatGptProposal, ProposalNotReadyError } from "../lib/chatgpt/proposals";
 import {
   applyMongoStatusBatch,
   createMongoFragment,
@@ -232,4 +234,74 @@ test("concurrent child creation and project deletion never leave orphan referenc
       assert.equal(ancestor?.type, "project");
     }
   }
+});
+
+test("ChatGPT preview stores only a pending proposal; human approval creates once", async () => {
+  const prepared = chatGptDraftSchema.parse({
+    ...draft({ title: "Previewed by ChatGPT" }),
+    source: { channel: "chatgpt" },
+  });
+  const proposal = await createChatGptProposal(prepared, "12345");
+  assert.equal(proposal.status, "pending");
+  assert.deepEqual(await listMongoFragments(), []);
+  assert.equal(await getChatGptProposal(proposal._id, "54321"), null);
+  assert.equal((await getChatGptProposal(proposal._id, "12345"))?.status, "pending");
+
+  const createdId = await approveChatGptProposal(proposal._id, "12345");
+  assert.equal(createdId, "F-000001");
+  const created = await getMongoFragment(createdId);
+  assert.equal(created?.title, prepared.title);
+  assert.equal(created?.original_input, prepared.original_input);
+  assert.equal(created?.source.channel, "chatgpt");
+  assert.equal((await getChatGptProposal(proposal._id, "12345"))?.status, "committed");
+  assert.equal((await getChatGptProposal(proposal._id, "12345"))?.fragment_id, createdId);
+
+  await assert.rejects(
+    approveChatGptProposal(proposal._id, "12345"),
+    (error: unknown) => error instanceof ProposalNotReadyError && error.statusCode === 409,
+  );
+  assert.equal((await listMongoFragments()).length, 1);
+});
+
+test("two approvals racing for one proposal can commit only one Fragment", async () => {
+  const prepared = chatGptDraftSchema.parse({
+    ...draft({ title: "Race on one proposal" }),
+    source: { channel: "chatgpt" },
+  });
+  const proposal = await createChatGptProposal(prepared, "12345");
+  const results = await Promise.allSettled([
+    approveChatGptProposal(proposal._id, "12345"),
+    approveChatGptProposal(proposal._id, "12345"),
+  ]);
+  assert.equal(results.filter((result) => result.status === "fulfilled").length, 1);
+  assert.equal(results.filter((result) => result.status === "rejected").length, 1);
+  assert.equal((await listMongoFragments()).length, 1);
+});
+
+test("ChatGPT approval revalidates relation changes after preview", async () => {
+  const project = await createMongoFragment(draft({ type: "project" }));
+  const prepared = chatGptDraftSchema.parse({
+    ...draft({ project: project.id, title: "Child awaiting approval" }),
+    source: { channel: "chatgpt" },
+  });
+  const proposal = await createChatGptProposal(prepared, "12345");
+  await deleteMongoFragment(project.id, project.updated_at);
+  await assert.rejects(approveChatGptProposal(proposal._id, "12345"));
+  assert.equal((await getChatGptProposal(proposal._id, "12345"))?.status, "pending");
+  assert.deepEqual(await listMongoFragments(), []);
+});
+
+test("expired ChatGPT proposals never create a canonical Fragment", async () => {
+  const prepared = chatGptDraftSchema.parse({
+    ...draft({ title: "Expired pending proposal" }),
+    source: { channel: "chatgpt" },
+  });
+  const proposal = await createChatGptProposal(prepared, "12345");
+  const client = await getMongoClient();
+  await client.db(TEST_DB).collection<{ _id: string; expires_at: Date }>("chatgpt_proposals").updateOne(
+    { _id: proposal._id },
+    { $set: { expires_at: new Date(Date.now() - 1000) } },
+  );
+  await assert.rejects(approveChatGptProposal(proposal._id, "12345"));
+  assert.deepEqual(await listMongoFragments(), []);
 });
