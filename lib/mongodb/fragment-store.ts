@@ -1,7 +1,7 @@
 import { MongoError, MongoServerError } from "mongodb";
 
 import type { Fragment } from "@/lib/fragment-schema";
-import { nextFragmentId } from "@/lib/fragments/id";
+import { formatFragmentId, nextFragmentId, parseFragmentId } from "@/lib/fragments/id";
 import { nextUpdatedAt } from "@/lib/fragments/versioning";
 import type { NewFragment } from "@/lib/fragments/local-store";
 import {
@@ -45,11 +45,21 @@ export async function getMongoFragment(id: string): Promise<Fragment | null> {
 export async function createMongoFragment(input: NewFragment): Promise<Fragment> {
   for (let attempt = 0; attempt < 10; attempt += 1) {
     try {
-      return await withMongoFragmentWrite(async (collection, session) => {
+      return await withMongoFragmentWrite(async (collection, session, epoch) => {
         const current = (
           await collection.find({}, { session }).toArray()
         ).map(parseMongoDocument);
-        const id = nextFragmentId(current.map((fragment) => fragment.id));
+        const metadata = await epoch.findOne({ _id: "fragments" }, { session });
+        const knownIds = current.map((fragment) => fragment.id);
+        if (metadata?.highest_allocated !== undefined) {
+          knownIds.push(formatFragmentId(metadata.highest_allocated));
+        }
+        const id = nextFragmentId(knownIds);
+        await epoch.updateOne(
+          { _id: "fragments" },
+          { $max: { highest_allocated: parseFragmentId(id) } },
+          { session },
+        );
         const now = new Date().toISOString();
         const candidate = assertFragmentSemantics({
           ...input,
@@ -128,7 +138,7 @@ export async function deleteMongoFragment(
   id: string,
   expectedUpdatedAt: string,
 ): Promise<void> {
-  await withMongoFragmentWrite(async (collection, session) => {
+  await withMongoFragmentWrite(async (collection, session, epoch) => {
     const documents = await collection.find({}, { session }).toArray();
     const all = documents.map(parseMongoDocument);
     const current = all.find((fragment) => fragment.id === id);
@@ -151,6 +161,12 @@ export async function deleteMongoFragment(
       );
     }
 
+    // Preserve high-water IDs even after deleting the largest/current item.
+    await epoch.updateOne(
+      { _id: "fragments" },
+      { $max: { highest_allocated: parseFragmentId(id) } },
+      { session },
+    );
     const result = await collection.deleteOne(
       { _id: id, updated_at: expectedUpdatedAt },
       { session },
