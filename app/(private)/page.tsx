@@ -10,7 +10,7 @@ import {
   toBoardCards,
   type BoardScope,
 } from "@/lib/fragments/board";
-import { isGitHubRemoteConfigured } from "@/lib/github/availability";
+import { isFragmentWriteConfigured } from "@/lib/fragments/backend";
 
 type BoardView = "board" | "incubating";
 
@@ -68,7 +68,7 @@ export default async function BoardPage({ searchParams }: BoardPageProps) {
         scope={scope}
         cards={toBoardCards(fragments)}
         showScope={scope === "all"}
-        remoteConfigured={isGitHubRemoteConfigured()}
+        remoteConfigured={isFragmentWriteConfigured()}
         recentlyDone={countRecentlyDone(fragments, new Date())}
         doneHref={doneHref(scope)}
         viewTabs={
