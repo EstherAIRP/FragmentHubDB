@@ -46,6 +46,15 @@ function draft(overrides: Partial<NewFragment> = {}): NewFragment {
   };
 }
 
+/** Synthetic fixtures are canonical Fragments; proposals omit schema_version. */
+function proposalDraft(overrides: Partial<NewFragment> = {}) {
+  const { schema_version: _schemaVersion, ...source } = draft(overrides);
+  return chatGptDraftSchema.parse({
+    ...source,
+    source: { channel: "chatgpt" },
+  });
+}
+
 before(async () => {
   // This test suite permanently deletes its own database between cases.
   // Fail closed unless the runner explicitly targets a local test replica set.
@@ -237,10 +246,7 @@ test("concurrent child creation and project deletion never leave orphan referenc
 });
 
 test("ChatGPT preview stores only a pending proposal; human approval creates once", async () => {
-  const prepared = chatGptDraftSchema.parse({
-    ...draft({ title: "Previewed by ChatGPT", original_input: "  Original input with whitespace  \\n" }),
-    source: { channel: "chatgpt" },
-  });
+  const prepared = proposalDraft({ title: "Previewed by ChatGPT", original_input: "  Original input with whitespace  \\n" });
   const proposal = await createChatGptProposal(prepared, "12345");
   assert.equal(proposal.status, "pending");
   assert.deepEqual(await listMongoFragments(), []);
@@ -264,10 +270,7 @@ test("ChatGPT preview stores only a pending proposal; human approval creates onc
 });
 
 test("two approvals racing for one proposal can commit only one Fragment", async () => {
-  const prepared = chatGptDraftSchema.parse({
-    ...draft({ title: "Race on one proposal" }),
-    source: { channel: "chatgpt" },
-  });
+  const prepared = proposalDraft({ title: "Race on one proposal" });
   const proposal = await createChatGptProposal(prepared, "12345");
   const results = await Promise.allSettled([
     approveChatGptProposal(proposal._id, "12345"),
@@ -280,10 +283,7 @@ test("two approvals racing for one proposal can commit only one Fragment", async
 
 test("ChatGPT approval revalidates relation changes after preview", async () => {
   const project = await createMongoFragment(draft({ type: "project" }));
-  const prepared = chatGptDraftSchema.parse({
-    ...draft({ project: project.id, title: "Child awaiting approval" }),
-    source: { channel: "chatgpt" },
-  });
+  const prepared = proposalDraft({ project: project.id, title: "Child awaiting approval" });
   const proposal = await createChatGptProposal(prepared, "12345");
   await deleteMongoFragment(project.id, project.updated_at);
   await assert.rejects(approveChatGptProposal(proposal._id, "12345"));
@@ -292,10 +292,7 @@ test("ChatGPT approval revalidates relation changes after preview", async () => 
 });
 
 test("expired ChatGPT proposals never create a canonical Fragment", async () => {
-  const prepared = chatGptDraftSchema.parse({
-    ...draft({ title: "Expired pending proposal" }),
-    source: { channel: "chatgpt" },
-  });
+  const prepared = proposalDraft({ title: "Expired pending proposal" });
   const proposal = await createChatGptProposal(prepared, "12345");
   const client = await getMongoClient();
   await client.db(TEST_DB).collection<{ _id: string; expires_at: Date }>("chatgpt_proposals").updateOne(
