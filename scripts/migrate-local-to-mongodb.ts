@@ -17,13 +17,13 @@ import { fragmentDirectory, listLocalFragments } from "../lib/fragments/local-st
 import { validateFragmentJsonSchema } from "../lib/fragments/json-schema-validator";
 import { assertFragmentHubDbOrigin } from "../lib/fragments/migration-origin";
 import { planMongoImport } from "../lib/fragments/migration-plan";
+import { parseFragmentId } from "../lib/fragments/id";
+import { parseMongoDocument } from "../lib/mongodb/document";
+import { withMongoFragmentWrite } from "../lib/mongodb/write-transaction";
 import {
   assertFragmentSemantics,
 } from "../lib/fragments/semantic-validator";
-import {
-  closeMongoClient,
-  getMongoFragmentCollection,
-} from "../lib/mongodb/client";
+import { closeMongoClient } from "../lib/mongodb/client";
 import { listMongoFragments } from "../lib/mongodb/fragment-store";
 
 async function main() {
@@ -103,22 +103,52 @@ async function main() {
     return;
   }
 
-  const collection = await getMongoFragmentCollection();
-  for (const fragment of pending) {
-    await collection.insertOne({ ...fragment, _id: fragment.id });
-  }
-
-  // Read back and compare every source fragment before declaring success.
-  const after = new Map(
-    (await listMongoFragments()).map((fragment) => [fragment.id, fragment]),
-  );
-  for (const fragment of source) {
-    if (!isDeepStrictEqual(after.get(fragment.id), fragment)) {
-      throw new Error("Post-import verification failed for " + fragment.id);
+  // Repeat all checks within one pinned MongoDB transaction; never trust
+  // the earlier dry-run snapshot when preparing writes.
+  const verifiedCount = await withMongoFragmentWrite(async (collection, session, epoch) => {
+    const before = (
+      await collection.find({}, { session }).toArray()
+    ).map(parseMongoDocument);
+    const transactionPlan = planMongoImport(source, before);
+    const candidateDataset = before.concat(transactionPlan.pending);
+    for (const fragment of candidateDataset) {
+      assertFragmentSemantics(
+        fragment,
+        candidateDataset.filter((other) => other.id !== fragment.id),
+      );
     }
-  }
 
-  console.log("Verified:", source.length, "source documents in Atlas.");
+    // Importing JSON must also reserve every historical source ID. This
+    // watermark is committed atomically with the document insertions.
+    const highWater = Math.max(...source.map((item) => parseFragmentId(item.id)));
+    await epoch.updateOne(
+      { _id: "fragments" },
+      { $max: { highest_allocated: highWater } },
+      { session },
+    );
+
+    if (transactionPlan.pending.length > 0) {
+      await collection.insertMany(
+        transactionPlan.pending.map((fragment) => ({
+          ...fragment,
+          _id: fragment.id,
+        })),
+        { session, ordered: true },
+      );
+    }
+
+    // Verify the snapshot *inside* the same transaction before committing.
+    const after = (
+      await collection.find({}, { session }).toArray()
+    ).map(parseMongoDocument);
+    const verified = planMongoImport(source, after);
+    if (verified.pending.length !== 0 || verified.identicalCount !== source.length) {
+      throw new Error("MongoDB import refused: transactional verification failed.");
+    }
+    return after.length;
+  });
+
+  console.log("Verified:", verifiedCount, "source documents in Atlas (one transaction).");
   console.log("Old JSON files were not deleted or modified.");
 }
 
