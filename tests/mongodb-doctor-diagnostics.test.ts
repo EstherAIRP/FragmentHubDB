@@ -83,3 +83,46 @@ test("write probe target guard and cleanup expose safe, actionable status codes"
     "WRITE_TEST_FAILED",
   );
 });
+
+test("server-selection nested TCP error takes priority over incidental TLS wording", () => {
+  const transport = Object.assign(
+    new Error("Client network socket disconnected before secure TLS connection was established"),
+    { name: "MongoNetworkError", code: "ECONNRESET" },
+  );
+  const selected = Object.assign(
+    new Error("Server selection timed out, TLS was not established"),
+    { name: "MongoServerSelectionError",
+      reason: { servers: new Map([["internal-host", { error: transport }]]) } },
+  );
+  const diagnosis = diagnoseMongoDoctorError(selected);
+  assert.equal(diagnosis.code, "NETWORK_ACCESS");
+  assert.equal(diagnosis.technicalCode, "ECONNRESET");
+  assert.doesNotMatch(JSON.stringify(diagnosis), /internal-host/);
+});
+
+test("nested TLS certificate errors retain safe structural code, never raw URI", () => {
+  const tls = Object.assign(
+    new Error("certificate verify failed mongodb+srv://app:secret@host.net"),
+    { code: "UNABLE_TO_VERIFY_LEAF_SIGNATURE" },
+  );
+  const error = Object.assign(
+    new Error("Server selection failed"),
+    { name: "MongoServerSelectionError", reason: { servers: new Map([["host.net", { error: tls }]]) } },
+  );
+  const diagnosis = diagnoseMongoDoctorError(error);
+  assert.equal(diagnosis.code, "TLS_CERTIFICATE");
+  assert.equal(diagnosis.technicalCode, "UNABLE_TO_VERIFY_LEAF_SIGNATURE");
+  assert.doesNotMatch(JSON.stringify(diagnosis), /secret|host.net/);
+});
+
+test("nested concrete OpenSSL alert is a TLS failure", () => {
+  const tls = Object.assign(new Error("ssl3_read_bytes:tlsv1 alert internal error"), {
+    code: "ERR_SSL_TLSV1_ALERT_INTERNAL_ERROR",
+  });
+  const error = Object.assign(new Error("Server selection failed"), {
+    name: "MongoServerSelectionError", reason: { servers: new Map([["node", { error: { cause: tls } }]]) },
+  });
+  const diagnosis = diagnoseMongoDoctorError(error);
+  assert.equal(diagnosis.code, "TLS_CONNECT");
+  assert.equal(diagnosis.technicalCode, "ERR_SSL_TLSV1_ALERT_INTERNAL_ERROR");
+});
