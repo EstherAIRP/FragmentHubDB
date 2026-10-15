@@ -4,7 +4,7 @@ import { getMongoClient } from "@/lib/mongodb/client";
 import { fragmentHubDbDatabaseName } from "@/lib/mongodb/database-name";
 import type { MongoFragmentDocument } from "@/lib/mongodb/document";
 
-type WriteEpoch = { _id: "fragments"; version: number };
+export type WriteEpoch = { _id: "fragments"; version: number; highest_allocated?: number };
 
 /**
  * Serialize Fragment mutations across serverless instances.
@@ -22,6 +22,7 @@ export async function withMongoFragmentWrite<T>(
   execute: (
     collection: Collection<MongoFragmentDocument>,
     session: ClientSession,
+    epoch: Collection<WriteEpoch>,
   ) => Promise<T>,
 ): Promise<T> {
   const client = await getMongoClient();
@@ -39,7 +40,7 @@ export async function withMongoFragmentWrite<T>(
         { $inc: { version: 1 } },
         { upsert: true, session },
       );
-      return execute(collection, session);
+      return execute(collection, session, epoch);
     }, {
       readConcern: { level: "snapshot" },
       writeConcern: { w: "majority" },
