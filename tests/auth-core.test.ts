@@ -111,7 +111,8 @@ test("browser session mutation rejects foreign, missing or malformed Origin", ()
   for (const bad of ["cross-site", "same-site", "invalid"]) {
     assert.equal(isTrustedBrowserMutation(req(site, bad), site, "production"), false);
   }
-  assert.equal(isTrustedBrowserMutation(req(site, "same-origin", "https://bad.example/api/fragments"), site, "production"), false);
+  // Reverse-proxy ingress may have a different hostname; the Origin remains pinned.
+  assert.equal(isTrustedBrowserMutation(req(site, "same-origin", "http://127.0.0.1:3100/api/fragments"), site, "production"), true);
   assert.equal(isTrustedBrowserMutation(req(site), undefined, "production"), false);
   const dev = new Request("http://localhost:3000/api/fragments", {
     method: "POST", headers: { Origin: "http://localhost:3000" },

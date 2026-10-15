@@ -1,8 +1,8 @@
 /**
  * CSRF guard for browser requests authenticated by session cookies.
  * Do not apply it to machine clients authenticated by a Bearer token.
- * Canonical site origin is pinned; neither Host nor X-Forwarded-Host
- * can override the expected deployed origin.
+ * Canonical site origin is pinned; Host and X-Forwarded-Host are never
+ * used to decide which browser Origin is allowed.
  */
 export function isTrustedBrowserMutation(
   request: Pick<Request, "headers" | "url">,
@@ -26,7 +26,6 @@ export function isTrustedBrowserMutation(
   try {
     const origin = new URL(suppliedOrigin);
     const canonical = new URL(expected);
-    const destination = new URL(request.url);
     // Require one serialized HTTP(S) Origin; no path, userinfo or query.
     if (!["http:", "https:"].includes(origin.protocol) ||
         suppliedOrigin !== origin.origin || origin.username || origin.password) {
@@ -36,8 +35,9 @@ export function isTrustedBrowserMutation(
         canonical.search || canonical.hash || canonical.pathname !== "/") {
       return false;
     }
-    return origin.origin === canonical.origin &&
-      destination.origin === canonical.origin;
+    // Ingress may use a local hostname behind a trusted proxy (e.g. CI);
+    // the browser-supplied Origin must still match the pinned public site.
+    return origin.origin === canonical.origin;
   } catch {
     return false;
   }
