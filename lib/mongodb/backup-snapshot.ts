@@ -58,7 +58,9 @@ async function readBoundedCollection<T extends import("mongodb").Document>(
     for await (const document of cursor) {
       budget.used += Buffer.byteLength(BSON.EJSON.stringify(document, { relaxed: true }), "utf8");
       if (budget.used > BACKUP_MAX_BYTES) throw new Error("BACKUP_SIZE_LIMIT");
-      documents.push(document);
+      // The MongoDB driver describes cursor rows as WithId<T>; all supported
+      // collection types already declare their _id and match T at runtime.
+      documents.push(document as T);
     }
   } finally {
     await cursor.close();
