@@ -74,7 +74,7 @@ OpenAPI：`docs/chatgpt-openapi.yaml`，**刻意不將網頁人工核准路由�
 }
 ```
 
-工具必須先和使用者確認分類，然後提交最終完整草稿；即便 `classification_confirmed=true`，**仍不代表核准寫入**。
+工具必須先和使用者確認分類，然後提交最終完整草稿；`original_input` 會逐字保留（包含前後空白），不允許額外未宣告欄位；即便 `classification_confirmed=true`，**仍不代表核准寫入**。
 
 成功回傳：
 
@@ -84,6 +84,7 @@ OpenAPI：`docs/chatgpt-openapi.yaml`，**刻意不將網頁人工核准路由�
   "status": "pending",
   "expires_at": "<ISO timestamp>",
   "review_path": "/chatgpt/review/<proposal_id>",
+  "review_url": "https://your-dedicated-fragmenthubdb-host/chatgpt/review/<proposal_id>",
   "message": "Open the review page while logged in..."
 }
 ```
