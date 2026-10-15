@@ -27,6 +27,30 @@ export function diagnoseMongoDoctorError(error: unknown): MongoDoctorDiagnosis {
   const hasText = (pattern: RegExp) =>
     parts.some((part) => typeof part.message === "string" && pattern.test(part.message));
 
+  if (hasText(/Refusing MongoDB write test/)) {
+    return {
+      code: "WRITE_TEST_GUARD",
+      guidance: "寫入測試僅允許明確指定 FragmentHubDB_DATA_STORE=mongodb 及 FragmentHubDB_MONGODB_DATABASE=fragmenthubdb_test。",
+    };
+  }
+  if (hasText(/MongoDB doctor invalid flags|MongoDB doctor invalid DNS IP/)) {
+    return {
+      code: "DOCTOR_ARGS",
+      guidance: "只允許 --strict 或 --write-test，另可加 --dns=8.8.8.8；不得同時使用 --strict 與 --write-test。",
+    };
+  }
+  if (hasText(/Write probe cleanup failed/)) {
+    return {
+      code: "WRITE_TEST_CLEANUP",
+      guidance: "測試暫存集合清理失敗。請檢查 fragmenthubdb_test 中 prefix 為 fragmenthubdb_write_probe_ 的集合，不要批次刪除其他資料。",
+    };
+  }
+  if (hasText(/Write probe:/)) {
+    return {
+      code: "WRITE_TEST_FAILED",
+      guidance: "診斷集合的交易提交、回滾或讀回驗證未成功；正式 Fragment 資料不應受到影響。",
+    };
+  }
   if (hasText(/FragmentHubDB_MONGODB_URI is missing/)) {
     return {
       code: "URI_MISSING",
