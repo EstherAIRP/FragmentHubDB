@@ -5,19 +5,46 @@
 export type MongoDoctorDiagnosis = {
   code: string;
   guidance: string;
+  /** Safe structural Node.js error code; never a driver message or a hostname. */
+  technicalCode?: string;
 };
 
-type ErrorPart = { name?: unknown; message?: unknown; code?: unknown; codeName?: unknown; cause?: unknown };
+type ErrorPart = {
+  name?: unknown;
+  message?: unknown;
+  code?: unknown;
+  codeName?: unknown;
+  syscall?: unknown;
+  cause?: unknown;
+  reason?: unknown;
+  error?: unknown;
+  servers?: unknown;
+};
 
-export function diagnoseMongoDoctorError(error: unknown): MongoDoctorDiagnosis {
+/** MongoServerSelectionError stores per-server transport failures under
+ * reason.servers, not necessarily under cause. Never log those raw objects. */
+function collectErrorParts(error: unknown): ErrorPart[] {
   const parts: ErrorPart[] = [];
   const seen = new Set<unknown>();
-  let cursor: unknown = error;
-  for (let i = 0; i < 6 && cursor !== null && typeof cursor === "object" && !seen.has(cursor); i++) {
-    seen.add(cursor);
-    parts.push(cursor as ErrorPart);
-    cursor = (cursor as ErrorPart).cause;
+  const queue: unknown[] = [error];
+  while (queue.length && parts.length < 40) {
+    const current = queue.shift();
+    if (!current || typeof current !== "object" || seen.has(current)) continue;
+    seen.add(current);
+    const part = current as ErrorPart;
+    parts.push(part);
+    queue.push(part.cause, part.reason, part.error);
+    if (part.servers instanceof Map) {
+      for (const server of Array.from(part.servers.values()).slice(0, 12)) {
+        queue.push(server);
+      }
+    }
   }
+  return parts;
+}
+
+export function diagnoseMongoDoctorError(error: unknown): MongoDoctorDiagnosis {
+  const parts = collectErrorParts(error);
   const hasCode = (...values: (string | number)[]) =>
     parts.some((part) => values.includes(part.code as string | number) ||
       values.includes(part.codeName as string | number));
@@ -82,6 +109,9 @@ export function diagnoseMongoDoctorError(error: unknown): MongoDoctorDiagnosis {
     };
   }
   if (hasCode("ENOTFOUND", "ENODATA", "ESERVFAIL", "ENODOMAIN", "ENONAME") ||
+      parts.some((part) =>
+        typeof part.syscall === "string" && /^(querySrv|queryTxt)$/.test(part.syscall)
+      ) ||
       hasText(/querySrv|queryTxt|DNS.*(not found|failed)|getaddrinfo ENOTFOUND/i)) {
     return {
       code: "DNS_LOOKUP",
@@ -95,18 +125,42 @@ export function diagnoseMongoDoctorError(error: unknown): MongoDoctorDiagnosis {
       guidance: "連線字串格式無效。請從 Atlas Connect → Drivers 複製原始 mongodb+srv:// 字串，替換密碼並正確 URL 編碼，不要包含引號或佔位文字。",
     };
   }
-  if (hasText(/TLS|SSL|certificate|handshake/i)) {
+  const safeTechnicalCode = parts
+    .map((part) => part.code)
+    .find((value) =>
+      typeof value === "string" &&
+      /^(?:E[A-Z0-9_]{2,60}|CERT_[A-Z0-9_]{2,60}|UNABLE_TO_VERIFY_LEAF_SIGNATURE|DEPTH_ZERO_SELF_SIGNED_CERT|SELF_SIGNED_CERT_IN_CHAIN)$/.test(value)
+    ) as string | undefined;
+  if (
+    hasCode("ERR_TLS_CERT_ALTNAME_INVALID", "CERT_HAS_EXPIRED",
+      "UNABLE_TO_VERIFY_LEAF_SIGNATURE", "DEPTH_ZERO_SELF_SIGNED_CERT",
+      "SELF_SIGNED_CERT_IN_CHAIN", "UNABLE_TO_GET_ISSUER_CERT_LOCALLY") ||
+    hasText(/certificate (?:verify failed|has expired|verification failed)|self.signed certificate|unable to verify the first certificate|hostname.*does not match.*certificate/i)
+  ) {
+    return {
+      code: "TLS_CERTIFICATE",
+      guidance: "TLS 憑證驗證失敗。請檢查電腦時間、HTTPS／TLS 攔截代理與憑證信任鏈；不可關閉 TLS 憑證驗證。",
+      technicalCode: safeTechnicalCode,
+    };
+  }
+  if (
+    (safeTechnicalCode?.startsWith("ERR_SSL_") ||
+      safeTechnicalCode?.startsWith("ERR_TLS_")) ||
+    hasText(/SSL routines|tlsv1 alert|TLS handshake failure|SSL handshake failed|ssl3_read_bytes/i)
+  ) {
     return {
       code: "TLS_CONNECT",
-      guidance: "TLS 安全連線失敗。請檢查系統時間、公司網路代理、防毒 HTTPS 檢查，以及 Node.js 版本。",
+      guidance: "連線發生明確 TLS 握手／通訊錯誤。請先重試唯讀診斷，再檢查 Atlas IP 白名單、VPN、防火牆、系統時間與 TLS 攔截代理。",
+      technicalCode: safeTechnicalCode,
     };
   }
   if (hasCode("ETIMEDOUT", "ECONNREFUSED", "EHOSTUNREACH", "ENETUNREACH", "ECONNRESET") ||
       hasName(/MongoServerSelectionError|MongoNetworkError|MongoNetworkTimeoutError/) ||
-      hasText(/Server selection timed out|connect ETIMEDOUT/i)) {
+      hasText(/Server selection timed out|connect ETIMEDOUT|disconnected before secure TLS connection/i)) {
     return {
       code: "NETWORK_ACCESS",
-      guidance: "無法連上 Atlas。請確認 Cluster 已啟動、Network Access 允許目前電腦的對外 IP，並檢查防火牆、VPN 與 27017 連線限制。",
+      guidance: "無法穩定連上 Atlas。請確認 Cluster 已啟動、IP 白名單允許目前對外 IP，並檢查防火牆、VPN 與 27017 TCP 連線。",
+      technicalCode: safeTechnicalCode,
     };
   }
   if (hasText(/transactions are unavailable/)) {
