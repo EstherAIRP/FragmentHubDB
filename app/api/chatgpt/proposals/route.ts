@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { isAuthConfigured } from "@/lib/auth";
+
 import { chatGptIntegrationConfig, isAuthorizedChatGptRequest } from "@/lib/chatgpt/auth";
 import { chatGptProposalRequestSchema } from "@/lib/chatgpt/proposal-schema";
 import { createChatGptProposal } from "@/lib/chatgpt/proposals";
@@ -15,7 +17,7 @@ export async function POST(request: Request) {
   if (!isAuthorizedChatGptRequest(request.headers.get("authorization"), config)) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
-  if (fragmentBackend() !== "mongodb" || !isFragmentWriteConfigured()) {
+  if (fragmentBackend() !== "mongodb" || !isFragmentWriteConfigured() || !isAuthConfigured()) {
     return NextResponse.json({ error: "MongoDB data store is not ready." }, { status: 503 });
   }
 
@@ -37,11 +39,13 @@ export async function POST(request: Request) {
 
   try {
     const proposal = await createChatGptProposal(parsed.data.draft, config!.ownerId);
+    const reviewPath = `/chatgpt/review/${proposal._id}`;
     return NextResponse.json({
       proposal_id: proposal._id,
       status: "pending",
       expires_at: proposal.expires_at.toISOString(),
-      review_path: `/chatgpt/review/${proposal._id}`,
+      review_path: reviewPath,
+      review_url: new URL(reviewPath, process.env.FragmentHubDB_PUBLIC_URL).toString(),
       message: "Open the review page while logged in; only GitHub-authenticated human approval creates a Fragment.",
     }, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
