@@ -87,6 +87,7 @@ jobs:
           npm run migrate:mongodb
           npm run migrate:mongodb -- --apply
           npm run migrate:mongodb
+          npm run doctor:mongodb -- --strict
           npx tsx --test tests/mongodb-migration-rehearsal.test.ts
 
       - name: Stop isolated MongoDB
