@@ -120,7 +120,10 @@ async function main() {
 
     // Importing JSON must also reserve every historical source ID. This
     // watermark is committed atomically with the document insertions.
-    const highWater = Math.max(...source.map((item) => parseFragmentId(item.id)));
+    const highWater = source.reduce(
+      (highest, item) => Math.max(highest, parseFragmentId(item.id)),
+      0,
+    );
     await epoch.updateOne(
       { _id: "fragments" },
       { $max: { highest_allocated: highWater } },
