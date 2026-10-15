@@ -40,7 +40,7 @@ FragmentHubDB 的設計核心是由使用者確認後才正式生效。
 
 ## 四、實作範圍（Scope）
 
-除非出現明確的批次維護需求，否則 v0.1 版本刻意不納入 GitHub Actions。
+GitHub Actions 可用於測試、型別檢查、建置及獨立的 MongoDB 測試資料庫整合驗證；不得在 CI 中匯入或更新正式 Fragment，也不得在未完成使用者確認前執行正式資料維護。
 
 ## 五、AI 工作流程規則（AI Workflow Rules）
 
@@ -58,7 +58,7 @@ FragmentHubDB 的設計核心是由使用者確認後才正式生效。
 - 正式環境的資料寫入必須經已完成身分驗證的 Web API 或具備等效 Schema、語意驗證與人工確認的專用工具，並保留樂觀並行控制；不得因 MongoDB 外掛可直接寫入就跳過確認。
 
 核心原則：AI 負責提出建議與整理內容，使用者負責確認決策；只有經過確認及驗證的資料，才能寫入正式儲存區。
-## 五、MongoDB Atlas 儲存後端
+## 六、MongoDB Atlas 儲存後端
 
 - 當 `FragmentHubDB_DATA_STORE=mongodb`，Atlas `fragments` 集合為唯一正式資料來源，GitHub JSON 不可與 Atlas 同時寫入。
 - 切換時先凍結 GitHub 寫入、進行 dry-run、明確執行匯入及讀回比對，再切換正式環境。
