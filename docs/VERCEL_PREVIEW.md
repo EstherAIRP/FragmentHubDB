@@ -83,3 +83,10 @@ The client_id and/or client_secret passed are incorrect.
 此專案的 `vercel.json` 設有 `ignoreCommand`；**相同 Git Commit 的重新部署可能被取消（ignored build step）**，即使環境變數剛更新。因此更新密鑰後請先驗證實際部署已成功，必要時在本分支建立有意義的文件或程式提交，觸發新 Git Commit 的 Preview 建置。不可修改 Production 或降低分支保護。
 
 若**全新且 Ready** 的 Preview 部署仍回傳同一錯誤，再確認 GitHub OAuth App 的 Client ID 與 Secret 來自**同一個 OAuth App**；必要時在該 App 產生新 Secret，更新 Vercel 的 Preview 分支環境變數，並重複完整的新部署檢查。不要把 GitHub OAuth Secret、OAuth code、access token 或其他密鑰輸出到公開日誌、GitHub 或聊天中。
+
+
+## 2026-10-15 Client ID 再次更新後的部署核對
+
+在排查 GitHub 授權端點 404 時，確認 `FragmentHubDB_GITHUB_CLIENT_ID` 的 Vercel Preview 環境變數於**前一次成功的 Preview 部署之後再次更新**。Vercel 後續因環境變數更新觸發的 `main` 部署被 ignored-build 規則取消，並沒有讓新值套用到 **`feature/mongodb-atlas-store`** 的已部署伺服器。
+
+處理方式：只更新本測試分支文件，觸發新的 Preview 建置；然後以 Vercel 的部署 ID、Git Commit 與 Ready 狀態，確認其建立時間晚於 Client ID 和 Secret 的更新時間。尚未完成新部署前，不應推論 GitHub 404 是新版憑證或授權參數的問題。正式 `main`、既有資料與其他 Vercel 專案不變。
