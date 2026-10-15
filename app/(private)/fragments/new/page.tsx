@@ -3,7 +3,7 @@ import { FragmentForm } from "@/components/fragment-form";
 import { requireSession } from "@/lib/auth";
 import { listFragments } from "@/lib/fragments";
 import { collectTags } from "@/lib/fragments/query";
-import { isGitHubRemoteConfigured } from "@/lib/github/availability";
+import { isFragmentWriteConfigured } from "@/lib/fragments/backend";
 import type { ManualFragmentDraft } from "@/lib/fragments/manual-draft";
 
 const initial: ManualFragmentDraft = {
@@ -64,7 +64,7 @@ export default async function NewFragmentPage() {
         domains={domains}
         fragments={options}
         tagSuggestions={collectTags(fragments)}
-        remoteConfigured={isGitHubRemoteConfigured()}
+        remoteConfigured={isFragmentWriteConfigured()}
       />
     </main>
   );
