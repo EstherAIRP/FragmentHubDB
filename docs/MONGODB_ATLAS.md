@@ -58,6 +58,45 @@ FragmentHubDB_MONGODB_DATABASE=fragmenthubdb
 
 此專案僅接受 `FragmentHubDB_MONGODB_URI`，不使用通用 `MONGODB_URI`。若透過 Atlas／Vercel 整合取得連線字串，請將它設定為本專案專屬的環境變數。
 
+## Atlas 測試叢集的寫入／交易權限驗證（明確啟用）
+
+當 `npm run doctor:mongodb` 唯讀檢查成功後，可以**由使用者主動**測試真實 Atlas 的寫入權限與交易提交能力：
+
+```powershell
+# 在 FragmentHubDB 專案根目錄，先確認已切換到正確開發分支
+git switch feature/mongodb-atlas-store
+git pull --ff-only origin feature/mongodb-atlas-store
+
+# Windows 若遇到 Node.js 預設 127.0.0.1 DNS ECONNREFUSED：
+npm run doctor:mongodb -- --write-test --dns=8.8.8.8
+
+# 其他電腦 DNS 正常時，直接執行：
+# npm run doctor:mongodb -- --write-test
+```
+
+**防誤用限制**：
+
+- 必須有 CLI 旗標 `--write-test`，單獨執行 `doctor:mongodb` 永遠是唯讀。
+- **必須明確**設定 `FragmentHubDB_DATA_STORE=mongodb` 且 `FragmentHubDB_MONGODB_DATABASE=fragmenthubdb_test`；`fragmenthubdb`、`fragmenthubdb_ci`、任何其他 DB 或未設定皆直接拒絕。
+- 請事先確認 `.env.local` 使用的是**FragmentHubDB 專用 Atlas 測試叢集與資料庫帳號**；名稱護欄無法辨識連線字串實際指向哪個 Atlas Project。
+- 診斷只在 `fragmenthubdb_test` 建立隨機、獨立的 `fragmenthubdb_write_probe_...` 暫存集合，不接觸 `fragments`、`metadata` 或 `chatgpt_proposals`。
+- 在暫存集合執行一次 MongoDB Transaction 寫入與提交，再用獨立讀取確認；接著刻意回滾另一筆交易並確認未留下資料，最後刪除**該次專屬**暫存集合。
+- 若程序中斷、網路斷線或刪除權限不足，暫存集合可能殘留；請先查看 Atlas 的 `fragmenthubdb_test` 集合清單，**不要批次刪除**同名開頭的集合，也不要刪除整個資料庫。
+
+成功輸出包含：
+
+```text
+Database: fragmenthubdb_test
+Ping: OK
+Transactions: supported topology
+TRANSACTION COMMIT: OK
+TRANSACTION ROLLBACK: OK
+TEMPORARY COLLECTION CLEANUP: OK
+WRITE TEST COMPLETE. Canonical Fragment data was untouched.
+```
+
+`--dns=8.8.8.8` 只影響該次執行的 Node.js 程序，不修改 Windows 網路設定。這項測試會對 Atlas 測試資料庫進行**實際寫入與刪除**，但不是正式 Fragment 匯入；完成後原資料仍為零筆。切勿在 GitHub Actions CI 中填入正式 Atlas 憑證；CI 的這項測試僅對本地 Docker MongoDB 執行。
+
 ## 無破壞性匯入與切換
 
 1. **先暫停舊 GitHub 寫入**，以防來源在遷移期間變動。
