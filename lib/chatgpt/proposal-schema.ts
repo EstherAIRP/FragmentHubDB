@@ -6,10 +6,14 @@ import {
 } from "@/lib/fragments/manual-draft";
 
 export const chatGptDraftSchema = manualFragmentDraftSchema.extend({
-  source: z.object({ channel: z.literal("chatgpt") }),
+  source: z.object({ channel: z.literal("chatgpt") }).strict(),
   // Preserve user-provided whitespace instead of transforming original input.
   original_input: z.string().min(1).refine((text) => text.trim().length > 0),
-});
+  ai: z.object({
+    classification_confirmed: z.literal(true),
+    interview_used: z.boolean(),
+  }).strict(),
+}).strict();
 
 export const chatGptProposalRequestSchema = z.object({
   draft: chatGptDraftSchema,
