@@ -83,6 +83,12 @@ test("ChatGPT proposals preserve user input and reject forged extra fields", () 
   assert.equal(chatGptProposalRequestSchema.safeParse({
     draft: fixture, approved: true,
   }).success, false);
+  assert.equal(chatGptProposalRequestSchema.safeParse({
+    draft: { ...fixture, unreviewed_extra_field: "drop me" },
+  }).success, false);
+  assert.equal(chatGptProposalRequestSchema.safeParse({
+    draft: { ...fixture, ai: { ...fixture.ai, hidden_flag: true } },
+  }).success, false);
   const input = "  Preserve leading and trailing spaces  ";
   const result = chatGptProposalRequestSchema.parse({
     draft: { ...fixture, original_input: input },
