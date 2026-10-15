@@ -6,6 +6,7 @@ import {
   listLocalFragments,
 } from "@/lib/fragments/local-store";
 import { fragmentBackend } from "@/lib/fragments/backend";
+import { logSafeStorageError } from "@/lib/security/storage-log";
 import {
   getGitHubFragment,
   listGitHubFragments,
@@ -22,7 +23,12 @@ import {
 export async function listFragments(): Promise<Fragment[]> {
   switch (fragmentBackend()) {
     case "mongodb":
-      return listMongoFragments();
+      try {
+        return await listMongoFragments();
+      } catch (error) {
+        logSafeStorageError("fragment_list", error);
+        throw new Error("Fragment data unavailable.");
+      }
     case "github":
       return listGitHubFragments();
     case "local":
@@ -33,7 +39,12 @@ export async function listFragments(): Promise<Fragment[]> {
 export async function getFragment(id: string): Promise<Fragment | null> {
   switch (fragmentBackend()) {
     case "mongodb":
-      return getMongoFragment(id);
+      try {
+        return await getMongoFragment(id);
+      } catch (error) {
+        logSafeStorageError("fragment_detail", error);
+        throw new Error("Fragment data unavailable.");
+      }
     case "github": {
       const stored = await getGitHubFragment(id);
       return stored?.fragment ?? null;

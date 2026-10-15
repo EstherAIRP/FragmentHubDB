@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { isAuthenticated } from "@/lib/auth";
+import { isTrustedBrowserMutation } from "@/lib/security/browser-mutation";
+import { logSafeStorageError } from "@/lib/security/storage-log";
 import { fragmentBackend, isFragmentWriteConfigured } from "@/lib/fragments/backend";
 import { manualFragmentDraftSchema } from "@/lib/fragments/manual-draft";
 import { prepareCreateInput } from "@/lib/fragments/write";
@@ -19,6 +21,9 @@ const requestSchema = z.object({
 export async function POST(request: Request) {
   if (!(await isAuthenticated())) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  if (!isTrustedBrowserMutation(request)) {
+    return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
   }
 
   if (!isFragmentWriteConfigured()) {
@@ -62,7 +67,7 @@ export async function POST(request: Request) {
         { status: error.status >= 500 ? 502 : 400 },
       );
     }
-    console.error("Fragment create failed:", error);
+    logSafeStorageError("fragment_create", error);
     return NextResponse.json({ error: "Fragment create failed." }, { status: 500 });
   }
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getCurrentSession } from "@/lib/auth";
+import { isTrustedBrowserMutation } from "@/lib/security/browser-mutation";
 import { chatGptIntegrationConfig, isSameOriginApproval } from "@/lib/chatgpt/auth";
 import { approveChatGptProposal, ProposalNotReadyError } from "@/lib/chatgpt/proposals";
 import { fragmentBackend, isFragmentWriteConfigured } from "@/lib/fragments/backend";
@@ -20,7 +21,7 @@ export async function POST(
   if (!isSameOriginApproval(
     request.headers.get("origin"),
     process.env.FragmentHubDB_PUBLIC_URL,
-  )) {
+  ) || !isTrustedBrowserMutation(request)) {
     return NextResponse.json({ error: "Cross-origin approval refused." }, { status: 403 });
   }
   if (fragmentBackend() !== "mongodb" || !isFragmentWriteConfigured()) {

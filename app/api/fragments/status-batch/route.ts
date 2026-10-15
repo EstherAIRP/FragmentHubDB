@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { isAuthenticated } from "@/lib/auth";
+import { isTrustedBrowserMutation } from "@/lib/security/browser-mutation";
+import { logSafeStorageError } from "@/lib/security/storage-log";
 import { fragmentBackend, isFragmentWriteConfigured } from "@/lib/fragments/backend";
 import { readLimitedJson, statusBatchRequestSchema } from "@/lib/fragments/status-batch";
 import { GitHubApiError } from "@/lib/github/client";
@@ -16,6 +18,9 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   if (!(await isAuthenticated())) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  if (!isTrustedBrowserMutation(request)) {
+    return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
   }
 
   if (!isFragmentWriteConfigured()) {
@@ -85,7 +90,7 @@ export async function POST(request: Request) {
       console.error("GitHub status batch failed:", error.status);
       return NextResponse.json({ error: "GitHub write failed." }, { status: 502 });
     }
-    console.error("Fragment status batch failed:", error);
+    logSafeStorageError("fragment_batch", error);
     return NextResponse.json(
       { error: "Fragment status batch failed." },
       { status: 500 },

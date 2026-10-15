@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { isAuthenticated } from "@/lib/auth";
+import { isTrustedBrowserMutation } from "@/lib/security/browser-mutation";
+import { logSafeStorageError } from "@/lib/security/storage-log";
 import { fragmentBackend, isFragmentWriteConfigured } from "@/lib/fragments/backend";
 import { fragmentIdSchema } from "@/lib/fragment-schema";
 import { manualFragmentDraftSchema } from "@/lib/fragments/manual-draft";
@@ -33,6 +35,9 @@ type RouteContext = {
 export async function PUT(request: Request, context: RouteContext) {
   if (!(await isAuthenticated())) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  if (!isTrustedBrowserMutation(request)) {
+    return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
   }
 
   if (!isFragmentWriteConfigured()) {
@@ -113,7 +118,7 @@ export async function PUT(request: Request, context: RouteContext) {
         { status: error.status >= 500 ? 502 : 400 },
       );
     }
-    console.error("Fragment update failed:", error);
+    logSafeStorageError("fragment_update", error);
     return NextResponse.json({ error: "Fragment update failed." }, { status: 500 });
   }
 }

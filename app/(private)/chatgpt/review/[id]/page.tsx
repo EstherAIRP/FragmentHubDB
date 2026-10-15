@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getCurrentSession, requireSession } from "@/lib/auth";
 import { chatGptIntegrationConfig } from "@/lib/chatgpt/auth";
 import { getChatGptProposal } from "@/lib/chatgpt/proposals";
+import { logSafeStorageError } from "@/lib/security/storage-log";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,10 @@ export default async function ChatGptProposalReview({
   const config = chatGptIntegrationConfig();
   if (!config || session?.id !== config.ownerId) notFound();
   const { id } = await params;
-  const proposal = await getChatGptProposal(id, config.ownerId);
+  const proposal = await getChatGptProposal(id, config.ownerId).catch((error: unknown) => {
+    logSafeStorageError("proposal_review", error);
+    throw new Error("Proposal data unavailable.");
+  });
   if (!proposal) notFound();
 
   const expired = proposal.expires_at.getTime() <= Date.now();
