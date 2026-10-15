@@ -90,6 +90,20 @@ jobs:
           npm run doctor:mongodb -- --strict
           npx tsx --test tests/mongodb-migration-rehearsal.test.ts
 
+      - name: MongoDB write-probe in isolated disposable test database
+        env:
+          CI: "true"
+          FragmentHubDB_DATA_STORE: mongodb
+          FragmentHubDB_MONGODB_URI: "mongodb://127.0.0.1:27017/?replicaSet=rs0&directConnection=true"
+          FragmentHubDB_MONGODB_DATABASE: fragmenthubdb_test
+        run: |
+          set -euo pipefail
+          npm run doctor:mongodb -- --write-test
+          # This database began empty, and the probe must clean up its
+          # randomly named temporary collection on successful completion.
+          docker exec fragmenthubdb-ci-mongo mongosh --quiet \\
+            --eval 'if (db.getSiblingDB("fragmenthubdb_test").getCollectionNames().length !== 0) quit(1)'
+
       - name: HTTP smoke test - ChatGPT API and human approval
         env:
           CI: "true"
