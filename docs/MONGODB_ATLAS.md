@@ -30,6 +30,19 @@ MongoDB 儲存採用以下兩個集合：
 
 此設計依賴 Atlas 的交易支援及資料庫帳號對 `fragments`、`metadata` 集合的讀寫權限。**任何直接透過 MongoDB 外掛、資料庫主控台或外部程式寫入 `fragments` 的行為都會繞過這個同步機制與人類確認流程**；正式操作應走 FragmentHubDB 的受保護 API。遷移腳本屬離線作業，執行前必須停止正式寫入。
 
+
+## 無正式憑證的 MongoDB 整合測試
+
+此開發分支的 GitHub Actions 會在 GitHub-hosted runner 中啟動**獨立的 MongoDB 8 單節點 Replica Set**，執行：
+
+```bash
+npm run test:mongodb:integration
+```
+
+測試使用固定的本機連線 `127.0.0.1:27017` 與隔離資料庫 `fragmenthubdb_ci`，並強制要求 `CI=true`。不符合條件會直接中止。測試會清除**測試資料庫**，故絕不可使用正式 Atlas URI。測試情境包含 CRUD、原始輸入不可覆寫、失效引用拒絕刪除、陳舊版本拒絕覆寫、看板批次原子性與並行更新。
+
+這是 MongoDB 真實交易的自動化驗證，但**不等同於已測試使用者正式 Atlas 叢集**，上線前仍須執行 Atlas 專屬網路、權限、連線及遷移預檢。
+
 ## 設定 Atlas
 
 1. 建立 Atlas Free Cluster、專用資料庫使用者（最小必要權限），設定 Network Access。
