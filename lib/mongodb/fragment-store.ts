@@ -1,4 +1,4 @@
-import { MongoError, MongoServerError } from "mongodb";
+import { MongoError, MongoServerError, type ClientSession, type Collection } from "mongodb";
 
 import type { Fragment } from "@/lib/fragment-schema";
 import { formatFragmentId, nextFragmentId, parseFragmentId } from "@/lib/fragments/id";
@@ -16,8 +16,8 @@ import {
 import {
   getMongoFragmentCollection,
 } from "@/lib/mongodb/client";
-import { parseMongoDocument } from "@/lib/mongodb/document";
-import { withMongoFragmentWrite } from "@/lib/mongodb/write-transaction";
+import { parseMongoDocument, type MongoFragmentDocument } from "@/lib/mongodb/document";
+import { withMongoFragmentWrite, type WriteEpoch } from "@/lib/mongodb/write-transaction";
 
 export class MongoFragmentConflictError extends Error {
   constructor(message: string) {
@@ -39,40 +39,50 @@ export async function getMongoFragment(id: string): Promise<Fragment | null> {
 }
 
 /**
+ * Shared canonical insertion: both human-confirmed Web and ChatGPT proposals
+ * use this exact allocation + reference validation under the write epoch.
+ */
+export async function insertMongoFragmentInTransaction(
+  input: NewFragment,
+  collection: Collection<MongoFragmentDocument>,
+  session: ClientSession,
+  epoch: Collection<WriteEpoch>,
+): Promise<Fragment> {
+  const current = (await collection.find({}, { session }).toArray()).map(parseMongoDocument);
+  const metadata = await epoch.findOne({ _id: "fragments" }, { session });
+  const knownIds = current.map((fragment) => fragment.id);
+  if (metadata?.highest_allocated !== undefined) {
+    knownIds.push(formatFragmentId(metadata.highest_allocated));
+  }
+  const id = nextFragmentId(knownIds);
+  const now = new Date().toISOString();
+  const candidate = assertFragmentSemantics({
+    ...input,
+    id,
+    created_at: now,
+    updated_at: now,
+  }, current);
+
+  await epoch.updateOne(
+    { _id: "fragments" },
+    { $max: { highest_allocated: parseFragmentId(id) } },
+    { session },
+  );
+  await collection.insertOne({ ...candidate, _id: id }, { session });
+  return candidate;
+}
+
+/**
  * All writers acquire one database-wide transaction epoch before reading
  * references. This prevents concurrent changes from invalidating a snapshot.
  */
 export async function createMongoFragment(input: NewFragment): Promise<Fragment> {
   for (let attempt = 0; attempt < 10; attempt += 1) {
     try {
-      return await withMongoFragmentWrite(async (collection, session, epoch) => {
-        const current = (
-          await collection.find({}, { session }).toArray()
-        ).map(parseMongoDocument);
-        const metadata = await epoch.findOne({ _id: "fragments" }, { session });
-        const knownIds = current.map((fragment) => fragment.id);
-        if (metadata?.highest_allocated !== undefined) {
-          knownIds.push(formatFragmentId(metadata.highest_allocated));
-        }
-        const id = nextFragmentId(knownIds);
-        await epoch.updateOne(
-          { _id: "fragments" },
-          { $max: { highest_allocated: parseFragmentId(id) } },
-          { session },
-        );
-        const now = new Date().toISOString();
-        const candidate = assertFragmentSemantics({
-          ...input,
-          id,
-          created_at: now,
-          updated_at: now,
-        }, current);
-
-        await collection.insertOne({ ...candidate, _id: id }, { session });
-        return candidate;
-      });
+      return await withMongoFragmentWrite((collection, session, epoch) =>
+        insertMongoFragmentInTransaction(input, collection, session, epoch),
+      );
     } catch (error) {
-      // The collection's unique _id remains a second collision guard.
       if (error instanceof MongoServerError && error.code === 11000) continue;
       throw error;
     }
