@@ -55,3 +55,16 @@ https://fragment-hub-db-git-feature-mongodb-cd5c25-esther1oos-projects.vercel.ap
 4. 填好 Preview 專用 Atlas URI，檢查 Vercel 連線能否成功；若失敗，先處理 Atlas 網路存取控制，不要修改正式叢集。
 5. 經使用者允許後，才在測試站驗證手動新增、語意檢查、原始輸入保留與交易。
 6. ChatGPT 工具專用 Bearer token 及外部連線驗收必須另行進行，**Web 人工核准**仍是最後提交的唯一途徑。
+
+
+## OAuth 設定後重新部署
+
+當使用者在 Vercel 新增 `FragmentHubDB_GITHUB_CLIENT_ID` 或
+`FragmentHubDB_GITHUB_CLIENT_SECRET` 後，應確認：
+
+- 兩者皆設為 **Preview → Git Branch: feature/mongodb-atlas-store**，且不勾選 Production。
+- 憑證值不需貼到 GitHub、CI、聊天或文件；此文件只記錄環境變數名稱。
+- 重新建立**新 Preview Deployment**，使最新設定載入；只看舊部署的 Ready 狀態不能推論新憑證已生效。
+- GitHub OAuth 將以固定分支預覽網址作為 `FragmentHubDB_PUBLIC_URL` 與 callback origin；若啟用了 Vercel Deployment Protection，須先確保測試者有存取權。
+- 本機 Atlas 已驗證交易，但未設定 `FragmentHubDB_MONGODB_URI` 前，預覽版尚無資料庫連線，不能視為完整上線。
+
