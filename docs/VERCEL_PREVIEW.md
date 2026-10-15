@@ -25,8 +25,8 @@
 | `FragmentHubDB_ALLOWED_GITHUB_IDS` | 已授權 GitHub 登入者的**數字** ID |
 | `FragmentHubDB_CHATGPT_OWNER_GITHUB_ID` | 指定可核准 ChatGPT 提案的 GitHub 數字 ID |
 | `FragmentHubDB_MONGODB_URI` | **待使用者在 Vercel Sensitive env 私下填入**，只連到 FragmentHubDB 專用測試 Atlas |
-| `FragmentHubDB_GITHUB_CLIENT_ID` | **待設定**：專用 GitHub OAuth App Client ID |
-| `FragmentHubDB_GITHUB_CLIENT_SECRET` | **待使用者在 Vercel Sensitive env 私下填入** |
+| `FragmentHubDB_GITHUB_CLIENT_ID` | 已於測試分支 Preview 設定；只記錄名稱，不記錄值 |
+| `FragmentHubDB_GITHUB_CLIENT_SECRET` | 已於測試分支 Preview 的 Sensitive env 設定；更新後須重新部署 |
 | `FragmentHubDB_CHATGPT_API_TOKEN` | **待工具連線階段設定**：獨立 Bearer token；未設定時 ChatGPT API 維持停用 |
 
 GitHub OAuth App 的 Homepage URL 指向上述固定分支預覽網址；Authorization callback URL 為：
@@ -68,3 +68,18 @@ https://fragment-hub-db-git-feature-mongodb-cd5c25-esther1oos-projects.vercel.ap
 - GitHub OAuth 將以固定分支預覽網址作為 `FragmentHubDB_PUBLIC_URL` 與 callback origin；若啟用了 Vercel Deployment Protection，須先確保測試者有存取權。
 - 本機 Atlas 已驗證交易，但未設定 `FragmentHubDB_MONGODB_URI` 前，預覽版尚無資料庫連線，不能視為完整上線。
 
+
+
+## OAuth 失敗排查（2026-10-15）
+
+實際登入曾出現 GitHub OAuth callback 伺服器錯誤：
+
+```text
+The client_id and/or client_secret passed are incorrect.
+```
+
+先檢查 **Vercel 部署建立時間**與 `FragmentHubDB_GITHUB_CLIENT_ID`、`FragmentHubDB_GITHUB_CLIENT_SECRET` **環境變數最後更新時間**。如果部署比設定舊，即使 Vercel 控制台已顯示新值，網站執行環境仍會使用舊憑證。部署紀錄應顯示來源為 `feature/mongodb-atlas-store`、target 為 Preview，不能以 Production `main` 的部署代替。
+
+此專案的 `vercel.json` 設有 `ignoreCommand`；**相同 Git Commit 的重新部署可能被取消（ignored build step）**，即使環境變數剛更新。因此更新密鑰後請先驗證實際部署已成功，必要時在本分支建立有意義的文件或程式提交，觸發新 Git Commit 的 Preview 建置。不可修改 Production 或降低分支保護。
+
+若**全新且 Ready** 的 Preview 部署仍回傳同一錯誤，再確認 GitHub OAuth App 的 Client ID 與 Secret 來自**同一個 OAuth App**；必要時在該 App 產生新 Secret，更新 Vercel 的 Preview 分支環境變數，並重複完整的新部署檢查。不要把 GitHub OAuth Secret、OAuth code、access token 或其他密鑰輸出到公開日誌、GitHub 或聊天中。
