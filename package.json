@@ -21,7 +21,8 @@
     "test:status-batch": "tsx --test tests/status-batch.test.ts",
     "migrate:mongodb": "tsx scripts/migrate-local-to-mongodb.ts",
     "test:backend": "tsx --test tests/mongodb-backend.test.ts tests/mongodb-versioning.test.ts tests/mongodb-document.test.ts tests/mongodb-migration-plan.test.ts tests/mongodb-database-name.test.ts",
-    "doctor:mongodb": "tsx scripts/doctor-mongodb.ts"
+    "doctor:mongodb": "tsx scripts/doctor-mongodb.ts",
+    "test:mongodb:integration": "tsx --test tests/mongodb-integration.test.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",
