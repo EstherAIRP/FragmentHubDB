@@ -58,6 +58,7 @@ test("every private page calls requireSession() before any data access", () => {
     "fragments/new/page.tsx",
     "fragments/[id]/page.tsx",
     "fragments/[id]/edit/page.tsx",
+    "chatgpt/review/[id]/page.tsx",
   ]) {
     assert.ok(relative.includes(expected), `missing private page ${expected}`);
   }
@@ -114,7 +115,7 @@ test("getCurrentSession reads cookies before the auth-config early return", () =
 });
 
 test("proxy redirects cookieless private requests to /login", () => {
-  for (const pathname of ["/", "/fragments", "/fragments/F-000001/edit"]) {
+  for (const pathname of ["/", "/fragments", "/fragments/F-000001/edit", "/chatgpt/review/test"]) {
     const variants: Record<string, string>[] = [{}, { RSC: "1" }];
     for (const headers of variants) {
       const response = proxy(
@@ -141,7 +142,7 @@ test("proxy lets requests with a session cookie through to the page gate", () =>
 });
 
 test("proxy only matches private page routes", () => {
-  assert.deepEqual(proxyConfig.matcher, ["/", "/fragments", "/fragments/:path*"]);
+  assert.deepEqual(proxyConfig.matcher, ["/", "/fragments", "/fragments/:path*", "/chatgpt/review/:path*"]);
   for (const pattern of proxyConfig.matcher) {
     assert.doesNotMatch(pattern, /^\/(api|login|_next)/);
   }
