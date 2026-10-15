@@ -99,3 +99,21 @@ The client_id and/or client_secret passed are incorrect.
 - 此分支的 `FragmentHubDB_DATA_STORE=mongodb`、`FragmentHubDB_MONGODB_DATABASE=fragmenthubdb_test` 保持不變；環境憑證更新後須新建 Preview 部署，才能讓 Next.js 伺服器載入。
 - 本機 doctor 成功不等於 Vercel 伺服器成功連線 Atlas。預覽站若在登入後載入看板仍報錯，優先確認 MongoDB `ServerSelectionError`、Atlas IP Access List、Vercel 出口網路與 TLS，而不是重設 GitHub OAuth 憑證。
 - 正式資料移轉、ChatGPT 提案核准實測、Production 啟用均待個別人工確認。不把連線密碼、完整 MongoDB URI 或任何金鑰記錄在此文件。
+
+## Preview Atlas 唯讀連線診斷
+
+在 Vercel 建置完成後，以**已登入 FragmentHubDB 的同一個瀏覽器**開啟：
+
+```text
+https://fragment-hub-db-git-feature-mongodb-cd5c25-esther1oos-projects.vercel.app/api/diagnostics/atlas
+```
+
+這是開發分支臨時診斷端點，要求已簽署的 FragmentHubDB 登入 Session，並且只在 `VERCEL_ENV=preview`、`FragmentHubDB_DATA_STORE=mongodb`、`FragmentHubDB_MONGODB_DATABASE=fragmenthubdb_test` 三項條件同時成立時可呼叫。預設拒絕所有非測試環境。
+
+- **唯一資料庫操作：** 執行 `db.command({ ping: 1 })`，唯讀，不查詢、修改任何 Fragment 或建立暫存集合。
+- 回傳 `status=ok`：Vercel 雲端 MongoDB Atlas 網路、TLS、資料庫登入以及 ping 已通過；不代表所有交易路徑已驗證。
+- 回傳 `status=failed`：只顯示受限代碼如 `DNS_LOOKUP`、`NETWORK_ACCESS`、`TLS_CONNECT`、`AUTH_FAILED`、`URI_FORMAT` 與安全建議；絕不輸出原始驅動錯誤、主機、URI、密碼或原始 Fragment。
+- 回傳 `status=unauthorized`：請先使用 GitHub OAuth 登入此測試網站；若登入後看板報錯，可在相同瀏覽器直接進入上述 API。
+- 回傳 `status=not_found`：測試環境護欄未通過，或此部署尚未包含診斷路由。
+
+完成雲端連線排查後，應自開發分支撤除診斷端點，避免不必要的長期管理介面。正式 `main` 不包含本診斷路由。
