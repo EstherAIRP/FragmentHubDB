@@ -117,3 +117,15 @@ https://fragment-hub-db-git-feature-mongodb-cd5c25-esther1oos-projects.vercel.ap
 - 回傳 `status=not_found`：測試環境護欄未通過，或此部署尚未包含診斷路由。
 
 完成雲端連線排查後，應自開發分支撤除診斷端點，避免不必要的長期管理介面。正式 `main` 不包含本診斷路由。
+
+
+## 低權限 Atlas 帳號切換驗收（2026-10-15）
+
+- 使用者已在 Atlas 測試專案建立專用 SCRAM 帳號 `fragmenthubdb_test_app`，角色為 `readWrite@fragmenthubdb_test`，資源限制為單一 Cluster。此設定不授予 `atlasAdmin`。
+- 使用者在本機已使用新帳號執行 `npm run doctor:mongodb -- --dns=8.8.8.8`，唯讀驗證通過。
+- 使用者接著執行 `npm run doctor:mongodb -- --write-test --dns=8.8.8.8`，交易提交、回滾、暫存集合清理均通過；未修改正式 Fragment。
+- 使用者已在 Vercel 將測試分支專用 `FragmentHubDB_MONGODB_URI` 改為新帳號的連線字串；只核對該 Sensitive 變數的儲存狀態與最後更新時間，不讀取或記錄其內容。
+- 本段文件更新會觸發新的 `feature/mongodb-atlas-store` Preview 部署，使新 URI 生效。嚴禁將此憑證加入 Production。
+- **雲端連線尚未驗證**：Atlas IP Access List 的臨時廣域允許規則已由使用者移除，Vercel 動態出口可能無法連上 Atlas。不要因此放寬白名單；若需再次進行只讀驗證，另經使用者確認、設短期到期時限，完成後立即撤除。
+- 不刪除或修改舊管理員帳號，直到確認不再被應用程式使用；舊管理員帳號存在與否不代表測試站已切換成功。
+- 正式資料移轉、合併草稿 PR、Production 切換及長期開放網路存取仍未授權。
