@@ -170,14 +170,14 @@ export function FragmentForm({
       const payload = (await response.json()) as SaveResponse;
 
       if (!response.ok || !payload.fragment) {
-        throw new Error(payload.error ?? "GitHub 儲存失敗。");
+        throw new Error(payload.error ?? "資料儲存失敗。");
       }
 
       router.push(`/fragments/${payload.fragment.id}`);
       router.refresh();
     } catch (error) {
       setSaveError(
-        error instanceof Error ? error.message : "GitHub 儲存失敗。",
+        error instanceof Error ? error.message : "資料儲存失敗。",
       );
     } finally {
       setSaving(false);
