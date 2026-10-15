@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { EJSON } from "mongodb";
+import { BSON } from "mongodb";
 
 import {
   BACKUP_FORMAT, BACKUP_FORMAT_VERSION, BACKUP_DATABASE,
@@ -42,8 +42,8 @@ test("snapshot rejects unknown DB, extra collection and inconsistent epoch", () 
 
 test("snapshot captures BSON Dates through canonical EJSON", () => {
   const value = { at: new Date("2026-10-15T12:00:00.000Z") };
-  const encoded = EJSON.stringify(value, { relaxed: false });
-  const decoded = EJSON.parse(encoded, { relaxed: false });
+  const encoded = BSON.EJSON.stringify(value, { relaxed: false });
+  const decoded = BSON.EJSON.parse(encoded, { relaxed: false });
   assert.ok((decoded as { at: unknown }).at instanceof Date);
 });
 

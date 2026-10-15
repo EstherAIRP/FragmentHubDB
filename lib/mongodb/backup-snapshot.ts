@@ -1,4 +1,4 @@
-import { EJSON, type ClientSession, type Db, type MongoClient } from "mongodb";
+import { BSON, type ClientSession, type Db, type MongoClient } from "mongodb";
 
 import { parseMongoDocument, type MongoFragmentDocument } from "@/lib/mongodb/document";
 import { validateMongoMetadata, type MongoMetadata } from "@/lib/mongodb/metadata-health";
@@ -151,14 +151,14 @@ export function validateBackupSnapshot(input: unknown): BackupCounts {
 
 export function encodeBackupSnapshot(snapshot: BackupSnapshot): Buffer {
   validateBackupSnapshot(snapshot);
-  const buffer = Buffer.from(EJSON.stringify(snapshot, { relaxed: false }), "utf8");
+  const buffer = Buffer.from(BSON.EJSON.stringify(snapshot, { relaxed: false }), "utf8");
   if (buffer.byteLength > BACKUP_MAX_BYTES) throw new Error("BACKUP_SIZE_LIMIT");
   return buffer;
 }
 
 export function decodeBackupSnapshot(input: Buffer): { snapshot: BackupSnapshot; counts: BackupCounts } {
   if (input.byteLength > BACKUP_MAX_BYTES) throw new Error("BACKUP_SIZE_LIMIT");
-  const parsed: unknown = EJSON.parse(input.toString("utf8"), { relaxed: false });
+  const parsed: unknown = BSON.EJSON.parse(input.toString("utf8"), { relaxed: false });
   const counts = validateBackupSnapshot(parsed);
   return { snapshot: parsed as BackupSnapshot, counts };
 }
