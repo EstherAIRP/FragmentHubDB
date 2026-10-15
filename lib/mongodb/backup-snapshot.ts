@@ -43,6 +43,30 @@ export async function verifyBackupCollectionScope(db: Db): Promise<void> {
 }
 
 /**
+ * Apply the size cap while iterating rather than buffering an unbounded
+ * cursor. BSON data and the final encoded snapshot both have hard limits.
+ */
+async function readBoundedCollection<T extends import("mongodb").Document>(
+  db: Db,
+  name: string,
+  session: ClientSession,
+  budget: { used: number },
+): Promise<T[]> {
+  const documents: T[] = [];
+  const cursor = db.collection<T>(name).find({}, { session, batchSize: 100 });
+  try {
+    for await (const document of cursor) {
+      budget.used += Buffer.byteLength(BSON.EJSON.stringify(document, { relaxed: true }), "utf8");
+      if (budget.used > BACKUP_MAX_BYTES) throw new Error("BACKUP_SIZE_LIMIT");
+      documents.push(document);
+    }
+  } finally {
+    await cursor.close();
+  }
+  return documents;
+}
+
+/**
  * Read all collections sequentially through ONE transaction snapshot.
  * This needs no write privileges, no server maintenance mode, and never
  * writes plaintext to disk. Large databases must use a different strategy.
@@ -56,20 +80,20 @@ export async function captureBackupSnapshot(
   await verifyBackupCollectionScope(db);
   const session: ClientSession = client.startSession({ causalConsistency: false });
   try {
-    const captured = await session.withTransaction<BackupSnapshot>(async () => ({
-      format: BACKUP_FORMAT,
-      version: BACKUP_FORMAT_VERSION,
-      database: BACKUP_DATABASE,
-      capturedAt: new Date().toISOString(),
-      collections: {
-        fragments: await db.collection<MongoFragmentDocument>("fragments")
-          .find({}, { session }).toArray(),
-        metadata: await db.collection<MongoMetadata>("metadata")
-          .find({}, { session }).toArray(),
-        chatgpt_proposals: await db.collection<ChatGptProposal>("chatgpt_proposals")
-          .find({}, { session }).toArray(),
-      },
-    }), {
+    const captured = await session.withTransaction<BackupSnapshot>(async () => {
+      const budget = { used: 0 };
+      return {
+        format: BACKUP_FORMAT,
+        version: BACKUP_FORMAT_VERSION,
+        database: BACKUP_DATABASE,
+        capturedAt: new Date().toISOString(),
+        collections: {
+          fragments: await readBoundedCollection<MongoFragmentDocument>(db, "fragments", session, budget),
+          metadata: await readBoundedCollection<MongoMetadata>(db, "metadata", session, budget),
+          chatgpt_proposals: await readBoundedCollection<ChatGptProposal>(db, "chatgpt_proposals", session, budget),
+        },
+      };
+    }, {
       readConcern: { level: "snapshot" },
       writeConcern: { w: "majority" },
       readPreference: "primary",
@@ -151,14 +175,14 @@ export function validateBackupSnapshot(input: unknown): BackupCounts {
 
 export function encodeBackupSnapshot(snapshot: BackupSnapshot): Buffer {
   validateBackupSnapshot(snapshot);
-  const buffer = Buffer.from(BSON.EJSON.stringify(snapshot, { relaxed: false }), "utf8");
+  const buffer = Buffer.from(BSON.EJSON.stringify(snapshot, { relaxed: true }), "utf8");
   if (buffer.byteLength > BACKUP_MAX_BYTES) throw new Error("BACKUP_SIZE_LIMIT");
   return buffer;
 }
 
 export function decodeBackupSnapshot(input: Buffer): { snapshot: BackupSnapshot; counts: BackupCounts } {
   if (input.byteLength > BACKUP_MAX_BYTES) throw new Error("BACKUP_SIZE_LIMIT");
-  const parsed: unknown = BSON.EJSON.parse(input.toString("utf8"), { relaxed: false });
+  const parsed: unknown = BSON.EJSON.parse(input.toString("utf8"), { relaxed: true });
   const counts = validateBackupSnapshot(parsed);
   return { snapshot: parsed as BackupSnapshot, counts };
 }

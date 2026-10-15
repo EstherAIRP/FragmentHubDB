@@ -42,8 +42,8 @@ test("snapshot rejects unknown DB, extra collection and inconsistent epoch", () 
 
 test("snapshot captures BSON Dates through canonical EJSON", () => {
   const value = { at: new Date("2026-10-15T12:00:00.000Z") };
-  const encoded = BSON.EJSON.stringify(value, { relaxed: false });
-  const decoded = BSON.EJSON.parse(encoded, { relaxed: false });
+  const encoded = BSON.EJSON.stringify(value, { relaxed: true });
+  const decoded = BSON.EJSON.parse(encoded, { relaxed: true });
   assert.ok((decoded as { at: unknown }).at instanceof Date);
 });
 
