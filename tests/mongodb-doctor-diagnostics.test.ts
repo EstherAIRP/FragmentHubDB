@@ -64,3 +64,22 @@ test("error cause chains can reveal actionable low-level connection failures", (
   });
   assert.equal(diagnoseMongoDoctorError(wrapper).code, "DNS_LOOKUP");
 });
+
+test("write probe target guard and cleanup expose safe, actionable status codes", () => {
+  assert.equal(
+    diagnoseMongoDoctorError(new Error("Refusing MongoDB write test: expected fragmenthubdb_test.")).code,
+    "WRITE_TEST_GUARD",
+  );
+  assert.equal(
+    diagnoseMongoDoctorError(new Error("MongoDB doctor invalid DNS IP address.")).code,
+    "DOCTOR_ARGS",
+  );
+  assert.equal(
+    diagnoseMongoDoctorError(new Error("Write probe cleanup failed.")).code,
+    "WRITE_TEST_CLEANUP",
+  );
+  assert.equal(
+    diagnoseMongoDoctorError(new Error("Write probe: transaction rollback left a document.")).code,
+    "WRITE_TEST_FAILED",
+  );
+});
