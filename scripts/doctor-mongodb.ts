@@ -10,11 +10,17 @@ import { loadEnvConfig } from "@next/env";
 
 import { assertFragmentHubDbOrigin } from "../lib/fragments/migration-origin";
 import { fragmentHubDbDatabaseName } from "../lib/mongodb/database-name";
+import { validateMongoMetadata, type MongoMetadata } from "../lib/mongodb/metadata-health";
 import { validateFragmentSemantics } from "../lib/fragments/semantic-validator";
 import { closeMongoClient, getMongoClient } from "../lib/mongodb/client";
 import { listMongoFragments } from "../lib/mongodb/fragment-store";
 
 async function main(): Promise<void> {
+  const args = process.argv.slice(2);
+  if (args.some((arg) => arg !== "--strict")) {
+    throw new Error("MongoDB doctor supports only --strict.");
+  }
+  const strict = args.includes("--strict");
   loadEnvConfig(process.cwd());
   const origin = execFileSync("git", ["remote", "get-url", "origin"], {
     cwd: process.cwd(),
@@ -40,22 +46,37 @@ async function main(): Promise<void> {
     ).map((issue) => fragment.id + ": " + issue.code + " (" + issue.path + ")"),
   );
 
-  console.log("Database:", fragmentHubDbDatabaseName(process.env.FragmentHubDB_MONGODB_DATABASE));
+  const databaseName = fragmentHubDbDatabaseName(process.env.FragmentHubDB_MONGODB_DATABASE);
+  const metadata = await client.db(databaseName)
+    .collection<MongoMetadata>("metadata")
+    .findOne({ _id: "fragments" });
+  const metadataIssues = validateMongoMetadata(fragments, metadata, strict);
+  if (strict && fragments.length === 0) {
+    metadataIssues.push("Strict readiness check requires at least one imported Fragment.");
+  }
+
+  console.log("Database:", databaseName);
   console.log("Ping: OK");
   console.log("Transactions: supported topology");
   console.log("Readable fragments:", fragments.length);
+  console.log("Metadata:", metadata ? "present" : "not yet initialized");
   if (issues.length) {
     for (const issue of issues) console.error("Validation issue:", issue);
     throw new Error("Atlas contains invalid Fragment references or metadata.");
   }
   console.log("Fragment validation: OK");
+  if (metadataIssues.length) {
+    for (const issue of metadataIssues) console.error("Metadata issue:", issue);
+    throw new Error("MongoDB transaction metadata is not ready for cutover.");
+  }
+  console.log(strict ? "STRICT READINESS: OK" : "Metadata consistency: OK");
   console.log("READ-ONLY CHECK COMPLETE. No data was written.");
 }
 
 main()
   .catch((error: unknown) => {
     // Do not print connection strings, driver error bodies or credentials.
-    if (error instanceof Error && /transactions are unavailable|invalid Fragment|Refusing MongoDB import/.test(error.message)) {
+    if (error instanceof Error && /transactions are unavailable|invalid Fragment|Refusing MongoDB import|transaction metadata is not ready|supports only --strict/.test(error.message)) {
       console.error("Atlas check failed:", error.message);
     } else {
       console.error("Atlas connection or readiness check failed; verify credentials, topology and network access.");
