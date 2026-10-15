@@ -90,6 +90,34 @@ jobs:
           npm run doctor:mongodb -- --strict
           npx tsx --test tests/mongodb-migration-rehearsal.test.ts
 
+      - name: HTTP smoke test - ChatGPT API and human approval
+        env:
+          CI: "true"
+          FragmentHubDB_DATA_STORE: mongodb
+          FragmentHubDB_MONGODB_URI: "mongodb://127.0.0.1:27017/?replicaSet=rs0&directConnection=true"
+          FragmentHubDB_MONGODB_DATABASE: fragmenthubdb_ci
+          FragmentHubDB_CHATGPT_API_TOKEN: fragmenthubdb_ci_test_token_0123456789abcdef0123456789abcdef
+          FragmentHubDB_CHATGPT_OWNER_GITHUB_ID: "123456"
+          FragmentHubDB_ALLOWED_GITHUB_IDS: "123456"
+          FragmentHubDB_GITHUB_CLIENT_ID: ci-oauth-client
+          FragmentHubDB_GITHUB_CLIENT_SECRET: ci-oauth-secret
+          FragmentHubDB_SESSION_SECRET: ci_session_secret_0123456789abcdef0123456789abcdef
+          FragmentHubDB_PUBLIC_URL: https://fragmenthubdb-ci.test
+        run: |
+          set -euo pipefail
+          npm start -- --hostname 127.0.0.1 --port 3100 > /tmp/fragmenthubdb-ci-next.log 2>&1 &
+          app_pid=$!
+          trap 'kill "$app_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 40); do
+            status=$(curl --silent --output /dev/null --max-time 2 \
+              --write-out '%{http_code}' http://127.0.0.1:3100/api/chatgpt/metadata || true)
+            if [ "$status" = "401" ]; then
+              break
+            fi
+            sleep 1
+          done
+          npx tsx --test tests/chatgpt-http-smoke.test.ts
+
       - name: Stop isolated MongoDB
         if: always()
         run: docker rm -f fragmenthubdb-ci-mongo 2>/dev/null || true
