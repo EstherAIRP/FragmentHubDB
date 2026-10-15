@@ -38,3 +38,40 @@ jobs:
 
       - name: Next.js build
         run: npm run build
+
+      - name: Start isolated MongoDB replica set
+        run: |
+          set -euo pipefail
+          docker run --rm -d --name fragmenthubdb-ci-mongo \
+            -p 127.0.0.1:27017:27017 \
+            mongo:8.0 --replSet rs0 --bind_ip_all
+          for attempt in $(seq 1 40); do
+            if docker exec fragmenthubdb-ci-mongo mongosh --quiet \
+              --eval 'db.adminCommand({ping:1}).ok' | grep -q 1; then
+              break
+            fi
+            sleep 2
+          done
+          docker exec fragmenthubdb-ci-mongo mongosh --quiet \
+            --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"127.0.0.1:27017"}]})'
+          for attempt in $(seq 1 40); do
+            if docker exec fragmenthubdb-ci-mongo mongosh --quiet \
+              --eval 'db.hello().isWritablePrimary' | grep -q true; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs fragmenthubdb-ci-mongo --tail 30
+          exit 1
+
+      - name: MongoDB integration tests
+        env:
+          CI: "true"
+          FragmentHubDB_DATA_STORE: mongodb
+          FragmentHubDB_MONGODB_URI: "mongodb://127.0.0.1:27017/?replicaSet=rs0&directConnection=true"
+          FragmentHubDB_MONGODB_DATABASE: fragmenthubdb_ci
+        run: npm run test:mongodb:integration
+
+      - name: Stop isolated MongoDB
+        if: always()
+        run: docker rm -f fragmenthubdb-ci-mongo 2>/dev/null || true
