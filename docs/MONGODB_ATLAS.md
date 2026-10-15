@@ -73,6 +73,8 @@ npm run migrate:mongodb
 
 `doctor:mongodb` 只讀取、檢查 Atlas 連線與伺服器拓樸是否支援交易，並驗證已存在的 Fragment；不會建立或更改資料。執行時若尚未建立碎片集合，正常顯示 0 筆。
 
+匯入完成後，請再執行 `npm run doctor:mongodb -- --strict`。嚴格模式會要求至少有一筆 Fragment，並檢查 `metadata` 交易同步紀錄及 `highest_allocated` 是否完整且涵蓋所有現存 Fragment ID；這是唯讀的正式切換檢查，不會修復或寫入資料。
+
 4. 檢查 dry-run 顯示的來源、已存在與待匯入筆數；確認後才執行：
 
 ~~~bash
