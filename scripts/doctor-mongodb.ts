@@ -123,6 +123,9 @@ main()
     // connection strings, credentials, hosts or internal deployment details.
     const diagnosis = diagnoseMongoDoctorError(error);
     console.error(`Atlas doctor [${diagnosis.code}]: ${diagnosis.guidance}`);
+    if (diagnosis.technicalCode) {
+      console.error(`Connection error code: ${diagnosis.technicalCode}`);
+    }
     process.exitCode = 1;
   })
   .finally(async () => {
