@@ -7,6 +7,7 @@ import { FragmentDataValidationError } from "../lib/fragments/semantic-validator
 import { closeMongoClient, getMongoClient } from "../lib/mongodb/client";
 import { BACKUP_DATABASE, captureBackupSnapshot, encodeBackupSnapshot, decodeBackupSnapshot } from "../lib/mongodb/backup-snapshot";
 import { withMongoFragmentWrite } from "../lib/mongodb/write-transaction";
+import { assertDisposableMongoValidatorTarget, directWriteCollectionOptions } from "../lib/mongodb/collection-validator";
 import { chatGptDraftSchema } from "../lib/chatgpt/proposal-schema";
 import { createChatGptProposal, getChatGptProposal, approveChatGptProposal, ProposalNotReadyError } from "../lib/chatgpt/proposals";
 import {
@@ -342,4 +343,53 @@ test("snapshot backup reads consistent fragments, metadata and proposals with no
   } finally {
     await db.dropDatabase();
   }
+});
+
+test("Phase 1 MongoDB validators admit Web writes and reject malformed direct documents", async () => {
+  assertDisposableMongoValidatorTarget(
+    process.env.FragmentHubDB_MONGODB_DATABASE ?? "",
+    process.env.FragmentHubDB_MONGODB_URI ?? "",
+    process.env.CI,
+  );
+  const client = await getMongoClient();
+  const db = client.db(TEST_DB);
+  const options = directWriteCollectionOptions();
+  // beforeEach dropped the complete, disposable CI DB only.
+  await db.createCollection("fragments", options.fragments);
+  await db.createCollection("metadata", options.metadata);
+
+  const created = await createMongoFragment(draft());
+  assert.equal(created.id, "F-000001");
+  assert.equal((await getMongoFragment(created.id))?.original_input, draft().original_input);
+  const updated = await replaceMongoFragment(
+    created.id, { ...created, title: "Edited under validator" }, created.updated_at,
+  );
+  assert.equal(updated.title, "Edited under validator");
+
+  const baseline = { ...created, _id: "F-000002", id: "F-000002" };
+  const bad: Record<string, unknown>[] = [
+    { ...baseline, title: undefined },
+    { ...baseline, unknown_field: "no extra columns" },
+    { ...baseline, status: "invalid" },
+    { ...baseline, priority: 7 },
+    { ...baseline, domains: ["unknown-domain"] },
+    { ...baseline, source: { channel: "chatgpt", extra: true } },
+    { ...baseline, ai: { classification_confirmed: false, interview_used: false } },
+    { ...baseline, _id: "F-000003" },
+  ];
+  for (const value of bad) {
+    await assert.rejects(
+      db.collection("fragments").insertOne(value),
+      (error: unknown) => typeof error === "object" && error !== null &&
+        "code" in error && error.code === 121,
+    );
+  }
+
+  await assert.rejects(
+    db.collection("metadata").updateOne(
+      { _id: "fragments" }, { $set: { highest_allocated: "not-a-number" } },
+    ),
+  );
+  assert.equal(await db.collection("fragments").countDocuments({}), 1);
+  assert.equal((await listMongoFragments()).length, 1);
 });
