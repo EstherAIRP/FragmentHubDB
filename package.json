@@ -20,7 +20,7 @@
     "test:private-auth": "tsx --test tests/private-route-auth.test.ts",
     "test:status-batch": "tsx --test tests/status-batch.test.ts",
     "migrate:mongodb": "tsx scripts/migrate-local-to-mongodb.ts",
-    "test:backend": "tsx --test tests/mongodb-backend.test.ts tests/mongodb-versioning.test.ts tests/mongodb-document.test.ts tests/mongodb-migration-plan.test.ts tests/mongodb-database-name.test.ts tests/mongodb-metadata-health.test.ts tests/mongodb-doctor-diagnostics.test.ts tests/mongodb-write-probe.test.ts tests/mongodb-backup-snapshot.test.ts",
+    "test:backend": "tsx --test tests/mongodb-backend.test.ts tests/mongodb-versioning.test.ts tests/mongodb-document.test.ts tests/mongodb-migration-plan.test.ts tests/mongodb-database-name.test.ts tests/mongodb-metadata-health.test.ts tests/mongodb-doctor-diagnostics.test.ts tests/mongodb-write-probe.test.ts tests/mongodb-backup-snapshot.test.ts tests/direct-mongo-contract.test.ts",
     "doctor:mongodb": "tsx scripts/doctor-mongodb.ts",
     "test:mongodb:integration": "tsx --test tests/mongodb-integration.test.ts",
     "test:chatgpt": "tsx --test tests/chatgpt-api.test.ts",
