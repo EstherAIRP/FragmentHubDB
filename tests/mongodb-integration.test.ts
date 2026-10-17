@@ -386,7 +386,7 @@ test("Phase 1 MongoDB validators admit Web writes and reject malformed direct do
   }
 
   await assert.rejects(
-    db.collection("metadata").updateOne(
+    db.collection<{ _id: string; highest_allocated?: unknown }>("metadata").updateOne(
       { _id: "fragments" }, { $set: { highest_allocated: "not-a-number" } },
     ),
   );
