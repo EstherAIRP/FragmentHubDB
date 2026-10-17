@@ -449,7 +449,7 @@ test("Phase 2 tool-compatible compare-and-swap reserves one unique Fragment ID",
   const client = await getMongoClient();
   const database = client.db(TEST_DB);
   const input = draft({ title: "GPT tool-compatible standalone insert" });
-  const created = await database.collection("fragments").insertMany([{
+  const created = await database.collection<{ _id: string; [key: string]: unknown }>("fragments").insertMany([{
     ...input, id: allocated, _id: allocated, created_at: now, updated_at: now,
   }]);
   assert.equal(created.insertedCount, 1);
