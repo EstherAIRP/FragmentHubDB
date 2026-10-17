@@ -393,3 +393,101 @@ test("Phase 1 MongoDB validators admit Web writes and reject malformed direct do
   assert.equal(await db.collection("fragments").countDocuments({}), 1);
   assert.equal((await listMongoFragments()).length, 1);
 });
+
+/**
+ * Phase 2 tool-compatible compare-and-swap: an actual ChatGPT Atlas plugin
+ * exposes find + update_many with matchedCount, but not findOneAndUpdate.
+ * This test exercises the same database primitives using the Node driver,
+ * NOT the connected ChatGPT plugin.
+ */
+async function reserveFragmentIdUsingToolCompatibleCas(): Promise<string> {
+  const client = await getMongoClient();
+  const epoch = client.db(TEST_DB).collection<{
+    _id: string;
+    version: number;
+    highest_allocated?: number;
+  }>("metadata");
+
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const found = await epoch.findOne({ _id: "fragments" });
+    if (!found || !Number.isSafeInteger(found.version) ||
+        !Number.isSafeInteger(found.highest_allocated)) {
+      throw new Error("GPT_ID_COUNTER_NOT_INITIALIZED");
+    }
+    const value = found.highest_allocated!;
+    if (value < 0 || value >= 999999) {
+      throw new Error("GPT_ID_SPACE_EXHAUSTED");
+    }
+
+    try {
+      const updated = await epoch.updateMany(
+        { _id: "fragments", highest_allocated: value },
+        { $inc: { highest_allocated: 1 } },
+        { upsert: false },
+      );
+      if (updated.matchedCount === 1) {
+        return "F-" + String(value + 1).padStart(6, "0");
+      }
+      assert.equal(updated.matchedCount, 0, "exactly one metadata row is allowed");
+    } catch (error) {
+      // A transaction in the Web writer may already be updating metadata.
+      if (!(error instanceof Error && /WriteConflict/.test(error.message))) {
+        throw error;
+      }
+    }
+  }
+  throw new Error("GPT_ID_RESERVATION_CONTENTION");
+}
+
+test("Phase 2 tool-compatible compare-and-swap reserves one unique Fragment ID", async () => {
+  const first = await createMongoFragment(draft());
+  assert.equal(first.id, "F-000001");
+  const allocated = await reserveFragmentIdUsingToolCompatibleCas();
+  assert.equal(allocated, "F-000002");
+
+  const now = new Date().toISOString();
+  const client = await getMongoClient();
+  const database = client.db(TEST_DB);
+  const input = draft({ title: "GPT tool-compatible standalone insert" });
+  const created = await database.collection("fragments").insertMany([{
+    ...input, id: allocated, _id: allocated, created_at: now, updated_at: now,
+  }]);
+  assert.equal(created.insertedCount, 1);
+  assert.equal(created.insertedIds[0], allocated);
+
+  const stored = await getMongoFragment(allocated);
+  assert.equal(stored?.title, input.title);
+  assert.equal(stored?.original_input, input.original_input);
+  assert.equal(stored?.project, null);
+  assert.deepEqual(stored?.related, []);
+  assert.equal((await createMongoFragment(draft())).id, "F-000003");
+});
+
+test("Phase 2 reserved numbers may be skipped but never reused", async () => {
+  await assert.rejects(reserveFragmentIdUsingToolCompatibleCas(), /NOT_INITIALIZED/);
+  await createMongoFragment(draft());
+  assert.equal(await reserveFragmentIdUsingToolCompatibleCas(), "F-000002");
+  // Deliberately do not insert the reserved ID; next Web ID must skip it.
+  assert.equal((await createMongoFragment(draft())).id, "F-000003");
+  const client = await getMongoClient();
+  const metadata = await client.db(TEST_DB).collection<{ _id: string; highest_allocated: number }>("metadata").findOne({ _id: "fragments" });
+  assert.equal(metadata?.highest_allocated, 3);
+});
+
+test("Phase 2 compare-and-swap prevents conflicting reservations", async () => {
+  await createMongoFragment(draft());
+  const [a, b] = await Promise.all([
+    reserveFragmentIdUsingToolCompatibleCas(),
+    reserveFragmentIdUsingToolCompatibleCas(),
+  ]);
+  assert.deepEqual([a, b].sort(), ["F-000002", "F-000003"]);
+});
+
+test("Phase 2 highest allocated number never overflows beyond six digits", async () => {
+  await createMongoFragment(draft());
+  const client = await getMongoClient();
+  const epoch = client.db(TEST_DB).collection<{ _id: string; highest_allocated: number }>("metadata");
+  await epoch.updateOne({ _id: "fragments" }, { $set: { highest_allocated: 999999 } });
+  await assert.rejects(reserveFragmentIdUsingToolCompatibleCas(), /SPACE_EXHAUSTED/);
+  assert.equal((await epoch.findOne({ _id: "fragments" }))?.highest_allocated, 999999);
+});
