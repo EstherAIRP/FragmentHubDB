@@ -1,0 +1,198 @@
+openapi: 3.1.0
+info:
+  title: FragmentHubDB ChatGPT API
+  version: 0.1.0-preview
+  description: |
+    Access to FragmentHubDB canonical MongoDB Fragments. Machine tools can
+    READ and submit a PENDING proposal. Final approval is an interactive,
+    GitHub OAuth-authenticated human-only browser operation and intentionally
+    has no OpenAPI operation. Do not treat classification_confirmed as commit approval.
+servers:
+  - url: https://YOUR-FRAGMENTHUBDB-DEPLOYMENT.example
+    description: Replace with the dedicated FragmentHubDB HTTPS host after deployment.
+security:
+  - ChatGptBearer: []
+components:
+  securitySchemes:
+    ChatGptBearer:
+      type: http
+      scheme: bearer
+      description: Server-provisioned independent FragmentHubDB_CHATGPT_API_TOKEN, never a MongoDB URI.
+  schemas:
+    FragmentId:
+      type: string
+      pattern: "^F-[0-9]{6}$"
+    Interview:
+      type: object
+      required: [question, answer]
+      properties:
+        question: { type: string }
+        answer: { type: string }
+    Draft:
+      type: object
+      additionalProperties: false
+      required: [scope, type, status, priority, urgency, domains, tags, project, related, title, summary, next_action, original_input, notes, interview, source, ai]
+      properties:
+        scope: { type: string, enum: [personal, work] }
+        type: { type: string, description: "Use GET /api/chatgpt/metadata to discover valid values." }
+        status: { type: string, description: "Use GET /api/chatgpt/metadata to discover valid values." }
+        priority: { type: string }
+        urgency: { type: string }
+        domains:
+          type: array
+          maxItems: 5
+          items: { type: string }
+        tags:
+          type: array
+          maxItems: 12
+          items: { type: string }
+        project:
+          anyOf:
+            - { $ref: '#/components/schemas/FragmentId' }
+            - { type: "null" }
+        related:
+          type: array
+          items: { $ref: '#/components/schemas/FragmentId' }
+        title: { type: string, maxLength: 120 }
+        summary: { type: string, maxLength: 2000 }
+        next_action: { type: [string, "null"], maxLength: 2000 }
+        original_input: { type: string, minLength: 1 }
+        notes: { type: [string, "null"] }
+        interview:
+          type: array
+          items: { $ref: '#/components/schemas/Interview' }
+        source:
+          type: object
+          additionalProperties: false
+          required: [channel]
+          properties:
+            channel: { type: string, const: chatgpt }
+        ai:
+          type: object
+          additionalProperties: false
+          required: [classification_confirmed, interview_used]
+          properties:
+            classification_confirmed: { type: boolean, const: true }
+            interview_used: { type: boolean }
+paths:
+  /api/chatgpt/metadata:
+    get:
+      operationId: getFragmentHubDbMetadata
+      summary: Read available classification and domain rules
+      responses:
+        "200":
+          description: Controlled taxonomy
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "401": { description: Bearer auth failed }
+  /api/chatgpt/fragments:
+    get:
+      operationId: listFragmentHubDbFragments
+      summary: Search and paginate canonical Fragments
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: scope, schema: { type: string } }
+        - { in: query, name: type, schema: { type: string } }
+        - { in: query, name: status, schema: { type: string } }
+        - { in: query, name: domain, schema: { type: string } }
+        - { in: query, name: tag, schema: { type: string } }
+        - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+        - { in: query, name: offset, schema: { type: integer, minimum: 0, default: 0 } }
+      responses:
+        "200":
+          description: Paginated Fragments
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, total, limit, offset]
+                properties:
+                  items:
+                    type: array
+                    items: { type: object, additionalProperties: true }
+                  total: { type: integer }
+                  limit: { type: integer }
+                  offset: { type: integer }
+        "401": { description: Bearer auth failed }
+        "503": { description: MongoDB is not active or accessible }
+  /api/chatgpt/fragments/{id}:
+    get:
+      operationId: getFragmentHubDbFragment
+      summary: Read one canonical Fragment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { $ref: '#/components/schemas/FragmentId' }
+      responses:
+        "200":
+          description: Full Fragment
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fragment: { type: object, additionalProperties: true }
+        "401": { description: Bearer auth failed }
+        "404": { description: Not found }
+  /api/chatgpt/proposals:
+    post:
+      operationId: proposeFragmentHubDbFragment
+      summary: |
+        Create PENDING proposal only; NEVER creates a canonical Fragment.
+        The human must visit review_path and confirm in the authenticated Web UI.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [draft]
+              properties:
+                draft: { $ref: '#/components/schemas/Draft' }
+      responses:
+        "201":
+          description: Pending proposal with browser review path
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [proposal_id, status, expires_at, review_path, review_url]
+                properties:
+                  proposal_id: { type: string }
+                  status: { type: string, const: pending }
+                  expires_at: { type: string, format: date-time }
+                  review_path: { type: string }
+                  review_url: { type: string, format: uri }
+                  message: { type: string }
+        "400": { description: Invalid JSON/schema }
+        "401": { description: Bearer auth failed }
+        "422": { description: Invalid cross-Fragment relationships }
+  /api/chatgpt/proposals/{id}:
+    get:
+      operationId: checkFragmentHubDbProposalStatus
+      summary: Poll the result of human browser approval (read only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Proposal status
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [proposal_id, status, fragment_id, expires_at]
+                properties:
+                  proposal_id: { type: string }
+                  status: { type: string, enum: [pending, expired, committed] }
+                  fragment_id: { type: [string, "null"] }
+                  expires_at: { type: string, format: date-time }
+        "401": { description: Bearer auth failed }
+        "404": { description: Proposal no longer exists or TTL-cleaned }

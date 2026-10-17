@@ -529,15 +529,15 @@ test("status batch responses map to UI outcomes", () => {
   // English server errors never reach the UI; status codes pick zh-TW text.
   assert.deepEqual(interpretStatusBatchResponse(502, { error: "GitHub write failed." }), {
     kind: "error",
-    message: "寫入 GitHub 失敗，請稍後再試。",
+    message: "資料儲存失敗，請稍後再試。",
   });
   assert.deepEqual(interpretStatusBatchResponse(500, { error: "Fragment status batch failed." }), {
     kind: "error",
-    message: "寫入 GitHub 失敗，請稍後再試。",
+    message: "資料儲存失敗，請稍後再試。",
   });
   assert.deepEqual(
     interpretStatusBatchResponse(503, { error: "GitHub Remote Store is not configured." }),
-    { kind: "error", message: "GitHub Remote Store 尚未設定，無法儲存。" },
+    { kind: "error", message: "資料儲存服務尚未設定，無法儲存。" },
   );
   assert.deepEqual(interpretStatusBatchResponse(418, "oops"), {
     kind: "error",

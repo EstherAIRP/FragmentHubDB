@@ -5,7 +5,7 @@ import { fragmentSchema, type Fragment } from "../lib/fragment-schema";
 import { validateFragmentJsonSchema } from "../lib/fragments/json-schema-validator";
 import { nextFragmentId } from "../lib/fragments/id";
 import { buildFragmentIndex } from "../lib/fragments/index";
-import { validateFragmentSemantics } from "../lib/fragments/semantic-validator";
+import { assertFragmentSemantics, FragmentDataValidationError, validateFragmentSemantics } from "../lib/fragments/semantic-validator";
 
 function fragment(overrides: Partial<Fragment> = {}): Fragment {
   return fragmentSchema.parse({
@@ -117,4 +117,33 @@ test("schema keeps interview_used synchronized with interview contents", () => {
   };
 
   assert.equal(fragmentSchema.safeParse(invalid).success, false);
+});
+
+test("stored Fragment original input and source metadata cannot be overwritten", () => {
+  const previous = fragment({ id: "F-000001" });
+  const immutableCases: Array<[string, Partial<Fragment>]> = [
+    ["original_input", { original_input: "AI-overwritten input" }],
+    ["source", { source: { channel: "web" } }],
+    ["ai", { ai: { classification_confirmed: true, interview_used: true }, interview: [{ question: "Q", answer: "A" }] }],
+    ["interview", { interview: [{ question: "Q", answer: "A" }], ai: { classification_confirmed: true, interview_used: true } }],
+  ];
+
+  for (const [field, patch] of immutableCases) {
+    const candidate = fragment({ ...previous, ...patch });
+    const issues = validateFragmentSemantics(candidate, [], { previous });
+    assert.ok(
+      issues.some((issue) => issue.path === field),
+      "Expected immutable " + field + " validation error",
+    );
+  }
+});
+
+test("canonical write validation rejects extra JSON properties before Zod strips them", () => {
+  const candidate = { ...fragment(), unexpected_field: "not allowed" };
+  assert.throws(
+    () => assertFragmentSemantics(candidate, []),
+    (error: unknown) =>
+      error instanceof FragmentDataValidationError &&
+      error.issues.some((issue) => issue.code === "json_schema_additionalProperties"),
+  );
 });

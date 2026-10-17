@@ -1,0 +1,149 @@
+name: FragmentHubDB checks
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Node.js 24
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: package.json
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Data validation
+        run: npm run validate:data
+
+      - name: Tests
+        run: npm test
+
+      - name: TypeScript
+        run: npm run typecheck
+
+      - name: Next.js build
+        run: npm run build
+
+      - name: Start isolated MongoDB replica set
+        run: |
+          set -euo pipefail
+          # Keep the container for diagnostics if mongod stops unexpectedly.
+          # The unconditional cleanup step removes it after the job.
+          docker run -d --name fragmenthubdb-ci-mongo \
+            -p 127.0.0.1:27017:27017 \
+            mongo:8.0 --replSet rs0 --bind_ip_all
+          ready=0
+          for attempt in $(seq 1 40); do
+            if ! docker inspect --format '{{.State.Running}}' fragmenthubdb-ci-mongo | grep -qx true; then
+              echo "MongoDB container stopped before becoming ready."
+              docker logs fragmenthubdb-ci-mongo --tail 50 || true
+              exit 1
+            fi
+            if docker exec fragmenthubdb-ci-mongo mongosh --quiet \
+              --eval 'db.adminCommand({ping:1}).ok' | grep -q 1; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" != 1 ]; then
+            docker logs fragmenthubdb-ci-mongo --tail 50 || true
+            exit 1
+          fi
+          docker exec fragmenthubdb-ci-mongo mongosh --quiet \
+            --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"127.0.0.1:27017"}]})'
+          for attempt in $(seq 1 40); do
+            if docker exec fragmenthubdb-ci-mongo mongosh --quiet \
+              --eval 'db.hello().isWritablePrimary' | grep -q true; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs fragmenthubdb-ci-mongo --tail 30
+          exit 1
+
+      - name: MongoDB integration tests
+        env:
+          CI: "true"
+          FragmentHubDB_DATA_STORE: mongodb
+          FragmentHubDB_MONGODB_URI: "mongodb://127.0.0.1:27017/?replicaSet=rs0&directConnection=true"
+          FragmentHubDB_MONGODB_DATABASE: fragmenthubdb_ci
+        run: npm run test:mongodb:integration
+
+      - name: Rehearse JSON migration in the disposable MongoDB database
+        env:
+          CI: "true"
+          FragmentHubDB_DATA_STORE: mongodb
+          FragmentHubDB_MONGODB_URI: "mongodb://127.0.0.1:27017/?replicaSet=rs0&directConnection=true"
+          FragmentHubDB_MONGODB_DATABASE: fragmenthubdb_ci
+        run: |
+          set -euo pipefail
+          # The container and its test-only database are created in this job.
+          docker exec fragmenthubdb-ci-mongo mongosh --quiet \
+            --eval 'db.getSiblingDB("fragmenthubdb_ci").dropDatabase()'
+          npm run doctor:mongodb
+          npm run migrate:mongodb
+          npm run migrate:mongodb -- --apply
+          npm run migrate:mongodb
+          npm run doctor:mongodb -- --strict
+          npx tsx --test tests/mongodb-migration-rehearsal.test.ts
+
+      - name: MongoDB write-probe in isolated disposable test database
+        env:
+          CI: "true"
+          FragmentHubDB_DATA_STORE: mongodb
+          FragmentHubDB_MONGODB_URI: "mongodb://127.0.0.1:27017/?replicaSet=rs0&directConnection=true"
+          FragmentHubDB_MONGODB_DATABASE: fragmenthubdb_test
+        run: |
+          set -euo pipefail
+          npm run doctor:mongodb -- --write-test
+          # This database began empty, and the probe must clean up its
+          # randomly named temporary collection on successful completion.
+          docker exec fragmenthubdb-ci-mongo mongosh --quiet --eval 'if (db.getSiblingDB("fragmenthubdb_test").getCollectionNames().length !== 0) quit(1)'
+
+      - name: HTTP smoke test - ChatGPT API and human approval
+        env:
+          CI: "true"
+          FragmentHubDB_DATA_STORE: mongodb
+          FragmentHubDB_MONGODB_URI: "mongodb://127.0.0.1:27017/?replicaSet=rs0&directConnection=true"
+          FragmentHubDB_MONGODB_DATABASE: fragmenthubdb_ci
+          FragmentHubDB_CHATGPT_API_TOKEN: fragmenthubdb_ci_test_token_0123456789abcdef0123456789abcdef
+          FragmentHubDB_CHATGPT_OWNER_GITHUB_ID: "123456"
+          FragmentHubDB_ALLOWED_GITHUB_IDS: "123456"
+          FragmentHubDB_GITHUB_CLIENT_ID: ci-oauth-client
+          FragmentHubDB_GITHUB_CLIENT_SECRET: ci-oauth-secret
+          FragmentHubDB_SESSION_SECRET: ci_session_secret_0123456789abcdef0123456789abcdef
+          FragmentHubDB_PUBLIC_URL: https://fragmenthubdb-ci.test
+        run: |
+          set -euo pipefail
+          npm start -- --hostname 127.0.0.1 --port 3100 > /tmp/fragmenthubdb-ci-next.log 2>&1 &
+          app_pid=$!
+          trap 'kill "$app_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 40); do
+            status=$(curl --silent --output /dev/null --max-time 2 \
+              --write-out '%{http_code}' http://127.0.0.1:3100/api/chatgpt/metadata || true)
+            if [ "$status" = "401" ]; then
+              break
+            fi
+            sleep 1
+          done
+          npx tsx --test tests/chatgpt-http-smoke.test.ts
+
+      - name: Stop isolated MongoDB
+        if: always()
+        run: docker rm -f fragmenthubdb-ci-mongo 2>/dev/null || true

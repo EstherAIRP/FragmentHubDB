@@ -78,6 +78,8 @@ FragmentHubDB_ALLOWED_GITHUB_IDS
 FragmentHubDB_GITHUB_TOKEN
 ```
 
+GitHub 資料後端僅允許 `EstherAIRP/FragmentHubDB`；為避免誤寫另一個專案，其他 `FragmentHubDB_GITHUB_REPOSITORY` 值會直接拒絕。若使用 MongoDB Atlas，請改依 `docs/MONGODB_ATLAS.md` 設定，登入仍保留 GitHub OAuth。
+
 Optional because defaults already exist:
 
 ```text

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { fragmentHubDbGitHubRepository } from "@/lib/fragments/repository-identity";
+
 export type GitHubClientConfig = {
   owner: string;
   repo: string;
@@ -20,17 +22,11 @@ export class GitHubApiError extends Error {
 }
 
 export function getGitHubConfigFromEnv(): GitHubClientConfig {
-  const repository =
-    process.env.FragmentHubDB_GITHUB_REPOSITORY ?? "EstherAIRP/FragmentHubDB";
-  const [owner, repo] = repository.split("/");
+  const { owner, repo } = fragmentHubDbGitHubRepository(
+    process.env.FragmentHubDB_GITHUB_REPOSITORY,
+  );
   const token = process.env.FragmentHubDB_GITHUB_TOKEN;
   const branch = process.env.FragmentHubDB_GITHUB_BRANCH ?? "main";
-
-  if (!owner || !repo) {
-    throw new Error(
-      "FragmentHubDB_GITHUB_REPOSITORY must use owner/repository format.",
-    );
-  }
 
   if (!token) {
     throw new Error("FragmentHubDB_GITHUB_TOKEN is not configured.");

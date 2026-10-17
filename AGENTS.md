@@ -16,7 +16,7 @@ FragmentHubDB 的設計核心是由使用者確認後才正式生效。
 ## 二、資料規則（Data Rules）
 
 - JSON 是正式的標準資料格式。
-- Fragment 的正式資料存放於 `data/fragments/`。
+- Fragment 的正式儲存來源由 `FragmentHubDB_DATA_STORE` 決定：切換後使用 MongoDB Atlas；`data/fragments/` 是舊版 GitHub JSON 來源及無破壞性遷移備份。
 - 不得將工作與個人資料拆分至不同的儲存路徑。
 - 使用 `scope` 中繼資料區分工作與個人內容。
 - Fragment ID 採用 `F-000001` 格式，不得在 ID 中編入分類資訊。
@@ -30,7 +30,7 @@ FragmentHubDB 的設計核心是由使用者確認後才正式生效。
 
 - 即使 GitHub 儲存庫是私有的，也不得假設部署後的網站同樣是私有的。
 - 不得將 Fragment 資料、GitHub Token、模型 API 金鑰或其他機密資訊放置於 `public/` 目錄下。
-- GitHub 存取操作必須在伺服器端執行。
+- GitHub 及 MongoDB Atlas 的存取操作都必須在伺服器端執行；Atlas URI 不得提交 Git 或交給瀏覽器。
 - FragmentHubDB Web 不得直接呼叫模型 API。
 - 未經身分驗證，不得開放正式環境存取私有 Fragment 內容。
 - 網站身分驗證採用 GitHub OAuth、PKCE 與簽章工作階段 Cookie。
@@ -40,7 +40,7 @@ FragmentHubDB 的設計核心是由使用者確認後才正式生效。
 
 ## 四、實作範圍（Scope）
 
-除非出現明確的批次維護需求，否則 v0.1 版本刻意不納入 GitHub Actions。
+GitHub Actions 可用於測試、型別檢查、建置及獨立的 MongoDB 測試資料庫整合驗證；不得在 CI 中匯入或更新正式 Fragment，也不得在未完成使用者確認前執行正式資料維護。
 
 ## 五、AI 工作流程規則（AI Workflow Rules）
 
@@ -55,6 +55,12 @@ FragmentHubDB 的設計核心是由使用者確認後才正式生效。
 - 最終整理時，必須透過程式組裝資料，確保已確認的分類中繼資料與 `original_input` 完全保留，不得由 AI 改寫。
 - ChatGPT 是唯一的 AI 分析介面。 不得在 FragmentHubDB Web 中新增模型 API 路由、模型 SDK 或 AI 自動分類功能。
 - FragmentHubDB Web 的手動新增與編輯功能，可以對草稿進行驗證與預覽。
-- 正式環境的資料寫入必須透過已完成身分驗證的 Phase 5 GitHub API 路由，並保留樂觀並行控制機制。
+- 正式環境的資料寫入必須經已完成身分驗證的 Web API 或具備等效 Schema、語意驗證與人工確認的專用工具，並保留樂觀並行控制；不得因 MongoDB 外掛可直接寫入就跳過確認。
 
 核心原則：AI 負責提出建議與整理內容，使用者負責確認決策；只有經過確認及驗證的資料，才能寫入正式儲存區。
+## 六、MongoDB Atlas 儲存後端
+
+- 當 `FragmentHubDB_DATA_STORE=mongodb`，Atlas `fragments` 集合為唯一正式資料來源，GitHub JSON 不可與 Atlas 同時寫入。
+- 切換時先凍結 GitHub 寫入、進行 dry-run、明確執行匯入及讀回比對，再切換正式環境。
+- Atlas 連線失敗不得默默退回 GitHub 或本機資料。
+- 細節遵守 `docs/MONGODB_ATLAS.md`。
