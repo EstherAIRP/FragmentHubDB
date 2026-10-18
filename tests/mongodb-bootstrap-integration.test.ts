@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync, spawnSync } from "node:child_process";
 import { after, before, test } from "node:test";
 import rawExample from "../config/fragment.example.json";
 import { fragmentSchema } from "../lib/fragment-schema";
@@ -86,4 +87,52 @@ test("P1 bootstrap refuses any pre-existing collection without changing document
   await assert.rejects(() => initializeEmptyBootstrap(db), /BOOTSTRAP_DATABASE_NOT_EMPTY/);
   assert.equal(await db.collection("fragments").countDocuments(), before);
   assert.deepEqual(await inspectBootstrap(db), ["fragments", "metadata"]);
+});
+
+test("P1 bootstrap command-line apply and inspect are guarded on disposable CI", async () => {
+  const db = (await getMongoClient()).db(CI_DB);
+  // The suite guard permits deletion of ONLY the local ephemeral CI DB.
+  await db.dropDatabase();
+
+  const dry = execFileSync("npm", ["run", "prepare:direct-mongo"], {
+    encoding: "utf8", timeout: 30000,
+  });
+  assert.match(dry, /"status":"DRY_RUN_ONLY"/);
+  assert.deepEqual(await inspectBootstrap(db), []);
+
+  const inspect = execFileSync("npm",
+    ["run", "prepare:direct-mongo", "--", "--inspect"],
+    { encoding: "utf8", timeout: 30000 },
+  );
+  assert.match(inspect, /"status":"READ_ONLY_INSPECTION"/);
+  assert.match(inspect, /"readyForEmptyBootstrap":true/);
+  assert.deepEqual(await inspectBootstrap(db), []);
+
+  const withoutConfirmation = spawnSync("npm",
+    ["run", "prepare:direct-mongo", "--", "--apply"],
+    { encoding: "utf8", timeout: 30000 },
+  );
+  assert.notEqual(withoutConfirmation.status, 0);
+  assert.deepEqual(await inspectBootstrap(db), []);
+
+  const applied = execFileSync("npm",
+    ["run", "prepare:direct-mongo", "--", "--apply",
+      "--confirm-target=fragmenthubdb_bootstrap_ci", "--acknowledge-empty"],
+    { encoding: "utf8", timeout: 30000 },
+  );
+  assert.match(applied, /"status":"TEST_DATABASE_BOOTSTRAPPED"/);
+  const epoch = await db.collection<{ _id: string; version: number; highest_allocated: number }>("metadata")
+    .findOne({ _id: "fragments" });
+  assert.deepEqual({ version: epoch?.version, high: epoch?.highest_allocated },
+    { version: 1, high: 0 });
+
+  const repeated = spawnSync("npm",
+    ["run", "prepare:direct-mongo", "--", "--apply",
+      "--confirm-target=fragmenthubdb_bootstrap_ci", "--acknowledge-empty"],
+    { encoding: "utf8", timeout: 30000 },
+  );
+  assert.notEqual(repeated.status, 0);
+  assert.match(repeated.stderr, /BOOTSTRAP_DATABASE_NOT_EMPTY/);
+  assert.deepEqual(await inspectBootstrap(db), ["fragments", "metadata"]);
+  assert.equal(await db.collection("metadata").countDocuments(), 1);
 });
