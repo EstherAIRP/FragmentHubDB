@@ -101,7 +101,7 @@ async function main() {
   }
   await initializeEmptyBootstrap(target);
   const names = await inspectBootstrap(target);
-  const epoch = await target.collection("metadata").findOne({ _id: "fragments" });
+  const epoch = await target.collection<{ _id: string; version: number; highest_allocated: number }>("metadata").findOne({ _id: "fragments" });
   if (names.join(",") !== "fragments,metadata" ||
       epoch?.version !== 1 || epoch?.highest_allocated !== 0) {
     throw new Error("BOOTSTRAP_POSTCHECK_FAILED");

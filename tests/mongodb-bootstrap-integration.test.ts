@@ -49,7 +49,7 @@ test("P1 bootstrap creates exactly two validated collections and zero allocated 
   const db = (await getMongoClient()).db(CI_DB);
   await initializeEmptyBootstrap(db);
   assert.deepEqual(await inspectBootstrap(db), ["fragments", "metadata"]);
-  const metadata = await db.collection("metadata").findOne({ _id: "fragments" });
+  const metadata = await db.collection<{ _id: string; version: number; highest_allocated: number }>("metadata").findOne({ _id: "fragments" });
   assert.equal(metadata?.version, 1);
   assert.equal(metadata?.highest_allocated, 0);
   assert.equal(await db.collection("fragments").countDocuments(), 0);

@@ -56,13 +56,16 @@ export async function inspectBootstrap(db: Db): Promise<string[]> {
  * A partial failure is left untouched for manual inspection.
  */
 export async function initializeEmptyBootstrap(db: Db): Promise<void> {
+  if (![CI_DB, TEST_DB].includes(db.databaseName)) {
+    throw new Error("BOOTSTRAP_TEST_DATABASE_ONLY");
+  }
   if ((await inspectBootstrap(db)).length !== 0) {
     throw new Error("BOOTSTRAP_DATABASE_NOT_EMPTY");
   }
   const options = directWriteCollectionOptions();
   await db.createCollection("fragments", options.fragments);
   await db.createCollection("metadata", options.metadata);
-  await db.collection("metadata").insertOne({
+  await db.collection<{ _id: string; version: number; highest_allocated: number }>("metadata").insertOne({
     _id: "fragments", version: 1, highest_allocated: 0,
   });
 }
