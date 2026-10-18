@@ -85,6 +85,14 @@ jobs:
           FragmentHubDB_MONGODB_DATABASE: fragmenthubdb_ci
         run: npm run test:mongodb:integration
 
+      - name: Test empty MongoDB bootstrap with strict validators (disposable CI)
+        env:
+          CI: "true"
+          FragmentHubDB_DATA_STORE: mongodb
+          FragmentHubDB_MONGODB_URI: "mongodb://127.0.0.1:27017/?replicaSet=rs0&directConnection=true"
+          FragmentHubDB_MONGODB_DATABASE: fragmenthubdb_bootstrap_ci
+        run: npm run test:mongodb:bootstrap
+
       - name: Rehearse JSON migration in the disposable MongoDB database
         env:
           CI: "true"
