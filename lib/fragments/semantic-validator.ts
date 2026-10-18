@@ -1,5 +1,6 @@
 import domainsConfig from "@/config/domains.json";
 import { fragmentSchema, type Fragment } from "@/lib/fragment-schema";
+import { validateFragmentJsonSchema } from "@/lib/fragments/json-schema-validator";
 
 export type FragmentValidationIssue = {
   code: string;
@@ -89,6 +90,17 @@ export function validateFragmentSemantics(
         message: "created_at cannot be changed after creation.",
       });
     }
+
+    // These are immutable even if callers bypass the Web form.
+    for (const key of ["original_input", "interview", "source", "ai"] as const) {
+      if (JSON.stringify(options.previous[key]) !== JSON.stringify(fragment[key])) {
+        issues.push({
+          code: "immutable_" + key,
+          path: key,
+          message: key + " cannot be changed after creation.",
+        });
+      }
+    }
   }
 
   return issues;
@@ -99,11 +111,22 @@ export function assertFragmentSemantics(
   fragments: readonly Fragment[],
   options: ValidateFragmentOptions = {},
 ): Fragment {
-  const parsed = fragmentSchema.parse(candidate);
-  const issues = validateFragmentSemantics(parsed, fragments, options);
+  // Validate the input BEFORE Zod parses it. A normal Zod object schema
+  // strips extra keys, so checking JSON Schema on the parsed value would
+  // accidentally accept documents forbidden by additionalProperties: false.
+  const schemaIssues = validateFragmentJsonSchema(candidate).map((issue) => ({
+    code: "json_schema_" + issue.keyword,
+    path: issue.path,
+    message: issue.message,
+  }));
+  if (schemaIssues.length > 0) {
+    throw new FragmentDataValidationError(schemaIssues);
+  }
 
-  if (issues.length > 0) {
-    throw new FragmentDataValidationError(issues);
+  const parsed = fragmentSchema.parse(candidate);
+  const semanticIssues = validateFragmentSemantics(parsed, fragments, options);
+  if (semanticIssues.length > 0) {
+    throw new FragmentDataValidationError(semanticIssues);
   }
 
   return parsed;

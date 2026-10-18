@@ -21,5 +21,5 @@ export function proxy(request: NextRequest) {
 // Positive allow-list of the private page routes only. /login, /api/*,
 // /_next/* and static assets are intentionally not matched.
 export const config = {
-  matcher: ["/", "/fragments", "/fragments/:path*"],
+  matcher: ["/", "/fragments", "/fragments/:path*", "/chatgpt/review/:path*"],
 };

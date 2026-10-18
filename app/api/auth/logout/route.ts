@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isTrustedBrowserMutation } from "@/lib/security/browser-mutation";
 
 import {
   expiredFlowCookie,
@@ -6,6 +7,9 @@ import {
 } from "@/lib/auth";
 
 export async function POST(request: Request) {
+  if (!isTrustedBrowserMutation(request)) {
+    return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
+  }
   const response = NextResponse.redirect(new URL("/login", request.url), 303);
   const sessionCookie = expiredSessionCookie();
   const flowCookie = expiredFlowCookie();
